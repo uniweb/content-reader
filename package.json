@@ -1,0 +1,44 @@
+{
+    "name": "@uniweb/content-reader",
+    "version": "1.0.0",
+    "description": "Markdown to ProseMirror document structure converter",
+    "type": "module",
+    "main": "src/index.js",
+    "exports": {
+        ".": "./src/index.js"
+    },
+    "scripts": {
+        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
+        "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
+        "test-report": "NODE_OPTIONS=--experimental-vm-modules jest --json > test-results.json 2>&1"
+    },
+    "keywords": [
+        "markdown",
+        "prosemirror",
+        "tiptap",
+        "parser"
+    ],
+    "author": "Proximify Inc.",
+    "license": "GPL-3.0-or-later",
+    "dependencies": {
+        "marked": "^11.1.0"
+    },
+    "devDependencies": {
+        "jest": "^29.7.0"
+    },
+    "jest": {
+        "testEnvironment": "node",
+        "verbose": true
+    },
+    "directories": {
+        "test": "tests"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/uniweb/content-reader.git"
+    },
+    "bugs": {
+        "url": "https://github.com/uniweb/content-reader/issues"
+    },
+    "homepage": "https://github.com/uniweb/content-reader#readme"
+}
