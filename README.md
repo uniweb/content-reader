@@ -139,7 +139,7 @@ Full support for aligned columns:
 ## Installation
 
 ```bash
-npm install @uniwebcms/content-reader
+npm install @uniweb/content-reader
 ```
 
 ## Usage
@@ -147,7 +147,7 @@ npm install @uniwebcms/content-reader
 Basic usage:
 
 ```javascript
-const { markdownToProseMirror } = require("@uniwebcms/content-reader");
+const { markdownToProseMirror } = require("@uniweb/content-reader");
 
 const markdown = `
 # Hello World
@@ -168,7 +168,7 @@ The library is designed to work seamlessly with TipTap editors:
 
 ```javascript
 import { Editor } from "@tiptap/core";
-import { markdownToProseMirror } from "@uniwebcms/content-reader";
+import { markdownToProseMirror } from "@uniweb/content-reader";
 
 const editor = new Editor({
   content: markdownToProseMirror(markdown),
@@ -243,7 +243,7 @@ We welcome contributions! Please see our contributing guidelines for details.
 1. Clone the repository:
 
    ```bash
-   git clone https://github.com/uniwebcms/content-reader.git
+   git clone https://github.com/uniweb/content-reader.git
    ```
 
 2. Install dependencies:
