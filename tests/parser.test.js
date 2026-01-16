@@ -506,4 +506,67 @@ describe("Curly Brace Attributes", () => {
       }),
     });
   });
+
+  test("parses video with controls attribute", () => {
+    const markdown = "![Demo Video](./demo.mp4){role=video controls muted}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./demo.mp4",
+        role: "video",
+        controls: true,
+        muted: true,
+      }),
+    });
+  });
+
+  test("parses download link with custom filename", () => {
+    const markdown = '[Get Report](./data.pdf){download="annual-report.pdf"}';
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "Get Report",
+      marks: [
+        {
+          type: "link",
+          attrs: expect.objectContaining({
+            href: "./data.pdf",
+            download: "annual-report.pdf",
+          }),
+        },
+      ],
+    });
+  });
+
+  test("parses image with multiple classes", () => {
+    const markdown = "![Gallery](./photo.jpg){.featured .rounded .shadow}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./photo.jpg",
+        class: "featured rounded shadow",
+      }),
+    });
+  });
+
+  test("parses booleans in different positions", () => {
+    const markdown = "![Video](./clip.mp4){muted role=video autoplay loop}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./clip.mp4",
+        role: "video",
+        muted: true,
+        autoplay: true,
+        loop: true,
+      }),
+    });
+  });
 });
