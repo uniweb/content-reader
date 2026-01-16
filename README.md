@@ -17,25 +17,116 @@ A JavaScript library for converting Markdown content into ProseMirror-compatible
 
 ### Extended Syntax
 
-- **Enhanced Images**: Support for image roles (content, background, icon, gallery) using prefix syntax:
+#### Curly Brace Attributes
 
-  ```markdown
-  ![Alt text](icon:path/to/icon.svg)
-  ![Alt text](background:path/to/bg.jpg)
-  ```
+Add rich attributes to images and links using `{...}` syntax:
 
-- **Enhanced Links**: Button variants with predefined styles:
+```markdown
+![Alt](./image.jpg){role=hero width=800 loading=lazy}
+[Link](https://example.com){target=_blank rel=noopener}
+[Button](https://example.com){.button variant=secondary icon=arrow}
+```
 
-  ```markdown
-  [Button Text](button:https://example.com)
-  ```
+**Supported attribute formats:**
+- `key=value` - Standard attribute
+- `key="value with spaces"` - Quoted value
+- `.className` - CSS class (multiple allowed)
+- `#idName` - Element ID
+- `booleanAttr` - Boolean attribute (sets to `true`)
 
-- **Tables with Alignment**: Full support for aligned columns:
-  ```markdown
-  | Left | Center | Right |
-  | :--- | :----: | ----: |
-  | Text |  Text  |  Text |
-  ```
+#### Image Attributes
+
+```markdown
+# Basic image with role and dimensions
+![Hero](./hero.jpg){role=hero width=1200 height=600}
+
+# Video with poster and playback options
+![Intro Video](./intro.mp4){role=video poster=./poster.jpg autoplay muted loop}
+
+# PDF with preview thumbnail
+![User Guide](./guide.pdf){role=pdf preview=./preview.jpg}
+
+# Styling attributes
+![Background](./bg.jpg){fit=cover position=center loading=lazy}
+
+# Classes and IDs
+![Logo](./logo.svg){.featured .rounded #main-logo}
+```
+
+| Attribute | Description |
+|-----------|-------------|
+| `role` | Semantic role: `image`, `icon`, `hero`, `video`, `pdf`, etc. |
+| `width`, `height` | Dimensions (pixels) |
+| `loading` | Loading behavior: `lazy`, `eager` |
+| `poster` | Poster image for videos |
+| `preview` | Preview image for PDFs/documents |
+| `autoplay`, `muted`, `loop`, `controls` | Video playback options |
+| `fit` | Object-fit: `cover`, `contain`, `fill`, etc. |
+| `position` | Object-position value |
+| `.class`, `#id` | CSS class and ID |
+
+#### Link Attributes
+
+```markdown
+# External link with target
+[External Link](https://example.com){target=_blank rel="noopener noreferrer"}
+
+# Download link
+[Download PDF](./document.pdf){download}
+
+# Link with custom filename for download
+[Get Report](./data.pdf){download="annual-report.pdf"}
+```
+
+| Attribute | Description |
+|-----------|-------------|
+| `target` | Link target: `_blank`, `_self`, etc. |
+| `rel` | Link relationship: `noopener`, `noreferrer`, etc. |
+| `download` | Download attribute (boolean or filename) |
+| `.class` | CSS class |
+
+#### Button Attributes
+
+Buttons can be created using the `.button` class or the legacy `button:` prefix:
+
+```markdown
+# Using .button class (recommended)
+[Get Started](https://example.com){.button variant=primary size=lg}
+[Learn More](https://example.com){.button variant=secondary icon=arrow-right}
+
+# Legacy prefix syntax (still supported)
+[Button Text](button:https://example.com)
+```
+
+| Attribute | Description |
+|-----------|-------------|
+| `variant` | Style variant: `primary`, `secondary`, `outline`, `ghost` |
+| `size` | Button size: `sm`, `md`, `lg` |
+| `icon` | Icon name or path |
+| `target`, `rel`, `download` | Same as links |
+
+#### Legacy Prefix Syntax
+
+The original prefix syntax is still supported for backward compatibility:
+
+```markdown
+# Image with role prefix
+![Alt text](icon:path/to/icon.svg)
+![Alt text](hero:path/to/bg.jpg)
+
+# Button with prefix
+[Button Text](button:https://example.com)
+```
+
+#### Tables with Alignment
+
+Full support for aligned columns:
+
+```markdown
+| Left | Center | Right |
+| :--- | :----: | ----: |
+| Text |  Text  |  Text |
+```
 
 ### Developer-Friendly Features
 
@@ -87,19 +178,34 @@ const editor = new Editor({
 
 ### Advanced Features
 
-#### Working with Image Roles
+#### Working with Rich Media
 
-The library supports extended image syntax for different display contexts:
+The library supports extended syntax for images, videos, and documents:
 
 ```javascript
 const markdown = `
-![Header image](background:header.jpg)
-![Profile photo](gallery:profile.jpg)
-![Settings](icon:settings.svg)
+![Hero Banner](./hero.jpg){role=hero width=1200 fit=cover}
+![Intro Video](./intro.mp4){role=video poster=./poster.jpg autoplay muted}
+![Documentation](./guide.pdf){role=pdf preview=./preview.jpg}
 `;
 
 const doc = markdownToProseMirror(markdown);
-// Each image will have a 'role' attribute in its output structure
+// Each media element will have rich attributes for component rendering
+```
+
+#### Working with Buttons and Links
+
+Create styled buttons and links with attributes:
+
+```javascript
+const markdown = `
+[Get Started](https://example.com){.button variant=primary size=lg}
+[Download](./file.pdf){download}
+[External](https://example.com){target=_blank rel=noopener}
+`;
+
+const doc = markdownToProseMirror(markdown);
+// Links and buttons will have appropriate attributes for rendering
 ```
 
 #### Handling Tables with Alignment
