@@ -2,7 +2,6 @@
  * @fileoverview Parse markdown tables
  */
 
-import { marked } from "marked";
 import { parseInline } from "./inline.js";
 
 /**
@@ -21,7 +20,7 @@ function getColumnAlignment(colDef) {
 
 /**
  * Parse table row content
- * @param {Object} token - Row token
+ * @param {Array} row - Row cells (objects with { text, tokens } in marked v11+)
  * @param {boolean} isHeader - Whether this is a header row
  * @param {Array} alignments - Column alignments
  * @param {Object} schema - ProseMirror schema
@@ -30,23 +29,27 @@ function getColumnAlignment(colDef) {
 function parseTableRow(row, isHeader, alignments, schema) {
   return {
     type: "tableRow",
-    content: row.map((cell, index) => ({
-      type: "tableCell",
-      attrs: {
-        colspan: 1,
-        rowspan: 1,
-        align: alignments[index] || null,
-        header: isHeader,
-      },
-      content: [
-        {
-          type: "paragraph",
-          content: marked.Lexer.lexInline(cell).flatMap((t) =>
-            parseInline(t, schema)
-          ),
+    content: row.map((cell, index) => {
+      // In marked v11+, cells are objects with { text, tokens }
+      // Use the pre-parsed tokens array directly
+      const tokens = cell.tokens || [];
+
+      return {
+        type: "tableCell",
+        attrs: {
+          colspan: 1,
+          rowspan: 1,
+          align: alignments[index] || null,
+          header: isHeader,
         },
-      ],
-    })),
+        content: [
+          {
+            type: "paragraph",
+            content: tokens.flatMap((t) => parseInline(t, schema)),
+          },
+        ],
+      };
+    }),
   };
 }
 

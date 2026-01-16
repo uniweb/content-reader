@@ -179,75 +179,63 @@ describe("Basic Markdown Parsing", () => {
 
 describe("Extended Syntax", () => {
   test("parses images without role", () => {
-    const markdown = "![Title](path/to/image.svg)";
+    // Images are extracted from paragraphs to root level for component rendering
+    const markdown = "![Alt Text](path/to/image.svg)";
     const result = markdownToProseMirror(markdown);
 
     expect(result).toEqual({
       type: "doc",
       content: [
         {
-          type: "paragraph",
-          content: [
-            {
-              type: "image",
-              attrs: {
-                src: "path/to/image.svg",
-                title: "Title",
-                alt: null,
-                role: "image",
-              },
-            },
-          ],
+          type: "image",
+          attrs: {
+            src: "path/to/image.svg",
+            caption: null,
+            alt: "Alt Text",
+            role: "image",
+          },
         },
       ],
     });
   });
 
   test("parses images with roles", () => {
-    const markdown = '![Title](icon:path/to/image.svg "Alt text")';
+    // Images are extracted from paragraphs to root level for component rendering
+    const markdown = '![Alt Text](icon:path/to/image.svg "Caption text")';
     const result = markdownToProseMirror(markdown);
 
     expect(result).toEqual({
       type: "doc",
       content: [
         {
-          type: "paragraph",
-          content: [
-            {
-              type: "image",
-              attrs: {
-                src: "path/to/image.svg",
-                title: "Title",
-                alt: "Alt text",
-                role: "icon",
-              },
-            },
-          ],
+          type: "image",
+          attrs: {
+            src: "path/to/image.svg",
+            caption: "Caption text",
+            alt: "Alt Text",
+            role: "icon",
+          },
         },
       ],
     });
   });
 
-  test("parses images without URL", () => {
-    const markdown = "![Title](https://test.com)";
+  test("parses images with URL", () => {
+    // Images are extracted from paragraphs to root level for component rendering
+    const markdown = "![Alt Text](https://test.com)";
     const result = markdownToProseMirror(markdown);
 
     expect(result).toEqual({
       type: "doc",
       content: [
         {
-          type: "paragraph",
-          content: [
-            {
-              type: "image",
-              attrs: {
-                src: "https://test.com",
-                title: "Title",
-                alt: null,
-                role: "image",
-              },
-            },
-          ],
+          type: "image",
+          attrs: {
+            src: "https://test.com",
+            caption: null,
+            alt: "Alt Text",
+            role: "image",
+          },
         },
       ],
     });
