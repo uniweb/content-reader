@@ -329,3 +329,181 @@ describe("Extended Syntax", () => {
     });
   });
 });
+
+describe("Curly Brace Attributes", () => {
+  test("parses image with role attribute", () => {
+    const markdown = "![Hero Image](./hero.jpg){role=hero}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./hero.jpg",
+        alt: "Hero Image",
+        role: "hero",
+      }),
+    });
+  });
+
+  test("parses image with multiple attributes", () => {
+    const markdown = '![Photo](./photo.jpg "A beautiful photo"){width=800 height=600 loading=lazy}';
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./photo.jpg",
+        alt: "Photo",
+        caption: "A beautiful photo",
+        width: 800,
+        height: 600,
+        loading: "lazy",
+      }),
+    });
+  });
+
+  test("parses video with poster attribute", () => {
+    const markdown = "![Intro Video](./intro.mp4){role=video poster=./poster.jpg autoplay muted loop}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./intro.mp4",
+        role: "video",
+        poster: "./poster.jpg",
+        autoplay: true,
+        muted: true,
+        loop: true,
+      }),
+    });
+  });
+
+  test("parses PDF with preview attribute", () => {
+    const markdown = "![User Guide](./guide.pdf){role=pdf preview=./guide-preview.jpg}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./guide.pdf",
+        role: "pdf",
+        preview: "./guide-preview.jpg",
+      }),
+    });
+  });
+
+  test("parses image with class and id", () => {
+    const markdown = "![Logo](./logo.svg){.featured #main-logo}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./logo.svg",
+        class: "featured",
+        id: "main-logo",
+      }),
+    });
+  });
+
+  test("parses link with target attribute", () => {
+    const markdown = '[External Link](https://example.com){target=_blank rel="noopener noreferrer"}';
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "External Link",
+      marks: [
+        {
+          type: "link",
+          attrs: expect.objectContaining({
+            href: "https://example.com",
+            target: "_blank",
+            rel: "noopener noreferrer",
+          }),
+        },
+      ],
+    });
+  });
+
+  test("parses download link", () => {
+    const markdown = "[Download PDF](./document.pdf){download}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "Download PDF",
+      marks: [
+        {
+          type: "link",
+          attrs: expect.objectContaining({
+            href: "./document.pdf",
+            download: true,
+          }),
+        },
+      ],
+    });
+  });
+
+  test("parses button with .button class", () => {
+    const markdown = "[Get Started](https://example.com){.button variant=secondary size=lg}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "Get Started",
+      marks: [
+        {
+          type: "button",
+          attrs: expect.objectContaining({
+            href: "https://example.com",
+            variant: "secondary",
+            size: "lg",
+          }),
+        },
+      ],
+    });
+  });
+
+  test("parses button with icon", () => {
+    const markdown = "[Learn More](https://example.com){.button icon=arrow-right}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "Learn More",
+      marks: [
+        {
+          type: "button",
+          attrs: expect.objectContaining({
+            href: "https://example.com",
+            icon: "arrow-right",
+          }),
+        },
+      ],
+    });
+  });
+
+  test("attribute role overrides prefix role (legacy compatibility)", () => {
+    // If both prefix and attribute role are present, attribute takes precedence
+    const markdown = "![Alt](icon:./image.svg){role=hero}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].attrs.role).toBe("hero");
+  });
+
+  test("parses image with fit and position attributes", () => {
+    const markdown = "![Background](./bg.jpg){fit=cover position=center}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0]).toEqual({
+      type: "image",
+      attrs: expect.objectContaining({
+        src: "./bg.jpg",
+        fit: "cover",
+        position: "center",
+      }),
+    });
+  });
+});

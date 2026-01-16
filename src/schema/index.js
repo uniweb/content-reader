@@ -32,10 +32,30 @@ const baseNodes = {
 
     image: {
         attrs: {
+            // Core attributes
             src: {},
             caption: { default: null },
             alt: { default: null },
-            role: { default: "content" },
+            role: { default: "image" }, // image, icon, hero, video, pdf, etc.
+            // Dimension attributes
+            width: { default: null },
+            height: { default: null },
+            // Loading behavior
+            loading: { default: null }, // lazy, eager
+            // Media attributes (for video/document roles)
+            poster: { default: null },  // Explicit poster image for videos
+            preview: { default: null }, // Preview image for PDFs/documents
+            // Video-specific attributes
+            autoplay: { default: null },
+            muted: { default: null },
+            loop: { default: null },
+            controls: { default: null },
+            // Styling attributes
+            fit: { default: null },     // object-fit: cover, contain, fill, etc.
+            position: { default: null }, // object-position
+            // Generic attributes
+            class: { default: null },
+            id: { default: null },
         },
         // group: "block inline",
     },
@@ -114,13 +134,25 @@ const baseMarks = {
         attrs: {
             href: {},
             title: { default: null },
+            // Extended attributes
+            target: { default: null },   // _blank, _self, etc.
+            rel: { default: null },      // noopener, noreferrer, etc.
+            download: { default: null }, // Download attribute (true or filename)
+            class: { default: null },
         },
     },
     button: {
         attrs: {
             href: {},
             title: { default: null },
-            variant: { default: "primary" },
+            variant: { default: "primary" }, // primary, secondary, outline, ghost, etc.
+            // Extended attributes
+            size: { default: null },     // sm, md, lg
+            icon: { default: null },     // Icon name or path
+            target: { default: null },
+            rel: { default: null },
+            download: { default: null },
+            class: { default: null },
         },
     },
     code: {

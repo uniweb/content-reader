@@ -7,6 +7,10 @@ import { marked } from "marked";
 import { parseMarkdownContent } from "./parser/index.js";
 import { getBaseSchema } from "./schema/index.js";
 import { isValidUniwebMarkdown } from "./utils.js";
+import { getMarkedExtensions } from "./parser/marked-extensions.js";
+
+// Configure marked with our custom extensions for attribute syntax
+marked.use(getMarkedExtensions());
 
 /**
  * Convert markdown content to ProseMirror document structure

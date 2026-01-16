@@ -63,8 +63,29 @@ function parseInline(token, schema, removeNewLine = false) {
     }
 
     if (token.type === "link") {
-        const isButton = token.href.startsWith("button:");
-        const href = isButton ? token.href.substring(7) : token.href;
+        // Check for button: prefix or .button class in attrs
+        const hasButtonPrefix = token.href.startsWith("button:");
+        const hasButtonClass = token.attrs?.class?.includes("button");
+        const isButton = hasButtonPrefix || hasButtonClass;
+
+        const href = hasButtonPrefix ? token.href.substring(7) : token.href;
+
+        // Extract known link/button attributes from curly brace attrs
+        const {
+            variant = "primary",
+            download,
+            target,
+            rel,
+            size,
+            icon,
+            ...otherAttrs
+        } = token.attrs || {};
+
+        // Remove 'button' from class if present (it's used as a type indicator)
+        let className = otherAttrs.class;
+        if (className) {
+            className = className.replace(/\bbutton\b/, "").trim() || undefined;
+        }
 
         return [
             {
@@ -75,7 +96,13 @@ function parseInline(token, schema, removeNewLine = false) {
                         attrs: {
                             href,
                             title: token.title || null,
-                            ...(isButton && { variant: "primary" }),
+                            ...(isButton && { variant }),
+                            ...(download !== undefined && { download }),
+                            ...(target && { target }),
+                            ...(rel && { rel }),
+                            ...(size && { size }),
+                            ...(icon && { icon }),
+                            ...(className && { class: className }),
                         },
                     },
                 ],
@@ -87,15 +114,34 @@ function parseInline(token, schema, removeNewLine = false) {
     if (token.type === "image") {
         let role, src;
 
-        // Find the first colon to handle role:url format correctly
+        // Find the first colon to handle role:url format correctly (legacy syntax)
         if (token.href.includes(":") && !token.href.startsWith("http")) {
             const colonIndex = token.href.indexOf(":");
             role = token.href.substring(0, colonIndex);
             src = token.href.substring(colonIndex + 1);
         } else {
-            role = "image";
             src = token.href;
         }
+
+        // Extract known image attributes from curly brace attrs
+        const {
+            role: attrRole,
+            width,
+            height,
+            loading,
+            poster,       // For videos: explicit poster image
+            preview,      // For PDFs/documents: preview image
+            autoplay,
+            muted,
+            loop,
+            controls,
+            fit,          // object-fit: cover, contain, etc.
+            position,     // object-position
+            ...otherAttrs
+        } = token.attrs || {};
+
+        // Attribute role takes precedence over prefix role
+        const finalRole = attrRole || role || "image";
 
         return [
             {
@@ -104,7 +150,26 @@ function parseInline(token, schema, removeNewLine = false) {
                     src,
                     caption: token.title || null,
                     alt: text || null,
-                    role,
+                    role: finalRole,
+                    // Dimension attributes
+                    ...(width && { width: parseInt(width, 10) || width }),
+                    ...(height && { height: parseInt(height, 10) || height }),
+                    // Loading behavior
+                    ...(loading && { loading }),
+                    // Media attributes (for video/document roles)
+                    ...(poster && { poster }),
+                    ...(preview && { preview }),
+                    // Video-specific attributes
+                    ...(autoplay !== undefined && { autoplay }),
+                    ...(muted !== undefined && { muted }),
+                    ...(loop !== undefined && { loop }),
+                    ...(controls !== undefined && { controls }),
+                    // Styling attributes
+                    ...(fit && { fit }),
+                    ...(position && { position }),
+                    // Any other custom attributes
+                    ...(otherAttrs.class && { class: otherAttrs.class }),
+                    ...(otherAttrs.id && { id: otherAttrs.id }),
                 },
             },
         ];
