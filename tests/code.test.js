@@ -12,7 +12,6 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: "javascript",
-            tag: null,
           },
           content: [
             {
@@ -25,7 +24,7 @@ describe("Code Parsing", () => {
     });
   });
 
-  test("parses code blocks with tags", () => {
+  test("parses tagged code blocks as dataBlocks", () => {
     const markdown = "```json:nav-links\n[{\"label\": \"Home\"}]\n```";
     const result = markdownToProseMirror(markdown);
 
@@ -33,17 +32,11 @@ describe("Code Parsing", () => {
       type: "doc",
       content: [
         {
-          type: "codeBlock",
+          type: "dataBlock",  // Structured data, not code for display
           attrs: {
-            language: "json",
             tag: "nav-links",
+            data: [{ label: "Home" }],
           },
-          content: [
-            {
-              type: "text",
-              text: '[{"label": "Home"}]',
-            },
-          ],
         },
       ],
     });
@@ -60,7 +53,6 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: null,
-            tag: null,
           },
           content: [
             {
@@ -107,7 +99,6 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: null,
-            tag: null,
           },
           content: [
             {
