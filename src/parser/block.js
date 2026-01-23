@@ -3,6 +3,7 @@
  */
 
 import { marked } from "marked";
+import yaml from "js-yaml";
 import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
@@ -61,98 +62,13 @@ function parseCodeBlockData(text, language) {
 
     if (lang === "yaml" || lang === "yml") {
         try {
-            // Use simple YAML parsing (js-yaml would need to be added as dependency)
-            // For now, parse simple key-value YAML
-            return parseSimpleYaml(text);
+            return yaml.load(text);
         } catch {
             return null;
         }
     }
 
     return null;
-}
-
-/**
- * Simple YAML parser for common cases
- * Handles objects, arrays, and primitives
- * @param {string} text - YAML text
- * @returns {*} Parsed data
- */
-function parseSimpleYaml(text) {
-    // Try JSON first (YAML is a superset of JSON)
-    try {
-        return JSON.parse(text);
-    } catch {
-        // Continue with YAML parsing
-    }
-
-    const lines = text.split("\n");
-    const result = {};
-    let currentKey = null;
-    let inArray = false;
-    let arrayItems = [];
-
-    for (const line of lines) {
-        const trimmed = line.trim();
-        if (!trimmed || trimmed.startsWith("#")) continue;
-
-        // Array item
-        if (trimmed.startsWith("- ")) {
-            const value = trimmed.slice(2).trim();
-            if (inArray) {
-                arrayItems.push(parseYamlValue(value));
-            }
-            continue;
-        }
-
-        // Key-value pair
-        const colonIndex = trimmed.indexOf(":");
-        if (colonIndex > 0) {
-            // Save previous array if any
-            if (inArray && currentKey) {
-                result[currentKey] = arrayItems;
-                arrayItems = [];
-                inArray = false;
-            }
-
-            const key = trimmed.slice(0, colonIndex).trim();
-            const value = trimmed.slice(colonIndex + 1).trim();
-
-            if (value === "") {
-                // Could be start of array or nested object
-                currentKey = key;
-                inArray = true;
-                arrayItems = [];
-            } else {
-                result[key] = parseYamlValue(value);
-                currentKey = key;
-            }
-        }
-    }
-
-    // Save final array if any
-    if (inArray && currentKey && arrayItems.length > 0) {
-        result[currentKey] = arrayItems;
-    }
-
-    return result;
-}
-
-/**
- * Parse a YAML value (string, number, boolean, null)
- */
-function parseYamlValue(value) {
-    if (value === "true") return true;
-    if (value === "false") return false;
-    if (value === "null" || value === "~") return null;
-    if (/^-?\d+$/.test(value)) return parseInt(value, 10);
-    if (/^-?\d+\.\d+$/.test(value)) return parseFloat(value);
-    // Remove quotes if present
-    if ((value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))) {
-        return value.slice(1, -1);
-    }
-    return value;
 }
 
 /**
