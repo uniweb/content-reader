@@ -12,7 +12,7 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: "javascript",
-            filename: null,
+            tag: null,
           },
           content: [
             {
@@ -25,8 +25,8 @@ describe("Code Parsing", () => {
     });
   });
 
-  test("parses code blocks with filenames", () => {
-    const markdown = "```javascript:example.js\nconst x = 1;\n```";
+  test("parses code blocks with tags", () => {
+    const markdown = "```json:nav-links\n[{\"label\": \"Home\"}]\n```";
     const result = markdownToProseMirror(markdown);
 
     expect(result).toEqual({
@@ -35,13 +35,13 @@ describe("Code Parsing", () => {
         {
           type: "codeBlock",
           attrs: {
-            language: "javascript",
-            filename: "example.js",
+            language: "json",
+            tag: "nav-links",
           },
           content: [
             {
               type: "text",
-              text: "const x = 1;",
+              text: '[{"label": "Home"}]',
             },
           ],
         },
@@ -60,7 +60,7 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: null,
-            filename: null,
+            tag: null,
           },
           content: [
             {
@@ -107,7 +107,7 @@ describe("Code Parsing", () => {
           type: "codeBlock",
           attrs: {
             language: null,
-            filename: null,
+            tag: null,
           },
           content: [
             {

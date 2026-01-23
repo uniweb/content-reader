@@ -8,17 +8,17 @@ import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
 
 /**
- * Process code block info string (e.g., "javascript:example.js")
+ * Process code block info string (e.g., "json:tag-name")
  * @param {string} info - Code block info string
- * @returns {Object} Language and filename
+ * @returns {Object} Language and optional tag
  */
 function processCodeInfo(info) {
-    if (!info) return { language: null, filename: null };
+    if (!info) return { language: null, tag: null };
 
     const parts = info.split(":");
     return {
         language: parts[0] || null,
-        filename: parts[1] || null,
+        tag: parts[1] || null,
     };
 }
 
@@ -142,10 +142,10 @@ function parseBlock(token, schema) {
     }
 
     if (token.type === "code") {
-        const { language, filename } = processCodeInfo(token.lang);
+        const { language, tag } = processCodeInfo(token.lang);
         return {
             type: "codeBlock",
-            attrs: { language, filename },
+            attrs: { language, tag },
             content: [
                 {
                     type: "text",
