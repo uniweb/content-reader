@@ -19,6 +19,11 @@ const PATTERNS = {
   // Link: [text](href "title"){attrs}
   // Captures: text, href, title (optional), attrs (optional)
   link: /^\[([^\]]+)\]\(([^)"'\s]+)(?:\s+["']([^"']*)["'])?\)(?:\{([^}]*)\})?/,
+
+  // Span (bracketed span): [text]{attrs}
+  // Pandoc-style bracketed spans - text with attributes but no href
+  // Captures: text, attrs
+  span: /^\[([^\]]+)\]\{([^}]+)\}/,
 }
 
 /**
@@ -101,6 +106,58 @@ export function createLinkExtension() {
 }
 
 /**
+ * Create a marked extension for bracketed spans (Pandoc-style)
+ *
+ * Syntax: [text]{.class #id key=value}
+ *
+ * Used for inline text with semantic attributes like:
+ * - [highlighted text]{.highlight}
+ * - [muted note]{.muted}
+ * - [important]{.callout}
+ *
+ * @returns {Object} Marked tokenizer extension
+ */
+export function createSpanExtension() {
+  return {
+    name: 'span',
+    level: 'inline',
+    start(src) {
+      // Find [ but we need to check it's not a link or image
+      const idx = src.indexOf('[')
+      return idx
+    },
+    tokenizer(src) {
+      // Don't match images or links
+      if (src.startsWith('![')) return
+
+      // Check if this is a link [text](url) - if so, skip
+      // We need to match span ONLY if there's no () after ]
+      const match = PATTERNS.span.exec(src)
+      if (!match) return
+
+      // Make sure this isn't actually a link (check there's no ( after ])
+      const bracketEnd = src.indexOf(']')
+      if (bracketEnd > 0 && src[bracketEnd + 1] === '(') return
+
+      const [raw, text, attrString] = match
+
+      // Parse attributes from curly braces
+      const attrs = parseAttributeString(attrString)
+
+      return {
+        type: 'span',
+        raw,
+        text,
+        attrs,
+        // Include tokens for nested formatting (bold, italic, etc.)
+        tokens: [],
+      }
+    },
+    childTokens: ['tokens'],
+  }
+}
+
+/**
  * Get all custom marked extensions
  *
  * @returns {Object} Marked extensions configuration
@@ -110,6 +167,7 @@ export function getMarkedExtensions() {
     extensions: [
       createImageExtension(),
       createLinkExtension(),
+      createSpanExtension(),
     ],
   }
 }

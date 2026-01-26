@@ -62,6 +62,40 @@ function parseInline(token, schema, removeNewLine = false) {
         ];
     }
 
+    if (token.type === "span") {
+        // Bracketed span: [text]{.class}
+        // Supports nested formatting via tokens
+        const { class: className, id, ...otherAttrs } = token.attrs || {};
+
+        const spanMark = {
+            type: "span",
+            attrs: {
+                ...(className && { class: className }),
+                ...(id && { id }),
+                ...otherAttrs,
+            },
+        };
+
+        // If there are child tokens (nested formatting), process them
+        if (token.tokens && token.tokens.length > 0) {
+            return token.tokens.flatMap((t) =>
+                parseInline(t, schema, removeNewLine).map((node) => ({
+                    ...node,
+                    marks: [...(node.marks || []), spanMark],
+                }))
+            );
+        }
+
+        // Simple text span
+        return [
+            {
+                type: "text",
+                marks: [spanMark],
+                text: token.text,
+            },
+        ];
+    }
+
     if (token.type === "link") {
         // Check for button: prefix or .button class in attrs
         const hasButtonPrefix = token.href.startsWith("button:");

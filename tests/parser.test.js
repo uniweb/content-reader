@@ -570,3 +570,85 @@ describe("Curly Brace Attributes", () => {
     });
   });
 });
+
+describe("Bracketed Spans", () => {
+  test("parses span with class", () => {
+    const markdown = "This is [highlighted text]{.highlight} in a sentence.";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content).toEqual([
+      { type: "text", text: "This is " },
+      {
+        type: "text",
+        text: "highlighted text",
+        marks: [{ type: "span", attrs: { class: "highlight" } }],
+      },
+      { type: "text", text: " in a sentence." },
+    ]);
+  });
+
+  test("parses span with multiple classes", () => {
+    const markdown = "[important note]{.callout .bold}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "important note",
+      marks: [{ type: "span", attrs: { class: "callout bold" } }],
+    });
+  });
+
+  test("parses muted span", () => {
+    const markdown = "[This is less important]{.muted}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "This is less important",
+      marks: [{ type: "span", attrs: { class: "muted" } }],
+    });
+  });
+
+  test("parses span with id and class", () => {
+    const markdown = "[key term]{#glossary-term .highlight}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "key term",
+      marks: [{ type: "span", attrs: { class: "highlight", id: "glossary-term" } }],
+    });
+  });
+
+  test("parses span with custom attributes", () => {
+    const markdown = "[tooltip text]{data-tooltip=\"More info\" .info}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content[0]).toEqual({
+      type: "text",
+      text: "tooltip text",
+      marks: [{ type: "span", attrs: { class: "info", "data-tooltip": "More info" } }],
+    });
+  });
+
+  test("does not confuse span with link", () => {
+    const markdown = "[Link](https://example.com) and [span]{.highlight}";
+    const result = markdownToProseMirror(markdown);
+
+    const content = result.content[0].content;
+    // First should be a link
+    expect(content[0].marks[0].type).toBe("link");
+    // Last should be a span
+    expect(content[content.length - 1].marks[0].type).toBe("span");
+  });
+
+  test("parses multiple spans in same paragraph", () => {
+    const markdown = "[first]{.highlight} normal [second]{.muted}";
+    const result = markdownToProseMirror(markdown);
+
+    const content = result.content[0].content;
+    expect(content[0].marks[0].attrs.class).toBe("highlight");
+    expect(content[1].text).toBe(" normal ");
+    expect(content[2].marks[0].attrs.class).toBe("muted");
+  });
+});
