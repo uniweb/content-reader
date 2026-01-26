@@ -1,6 +1,6 @@
 {
     "name": "@uniweb/content-reader",
-    "version": "1.0.4",
+    "version": "1.0.5",
     "description": "Markdown to ProseMirror document structure converter",
     "type": "module",
     "main": "src/index.js",
