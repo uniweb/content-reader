@@ -105,6 +105,46 @@ Buttons can be created using the `.button` class or the legacy `button:` prefix:
 | `icon` | Icon name or path |
 | `target`, `rel`, `download` | Same as links |
 
+#### Bracketed Spans
+
+Style inline text with semantic classes using Pandoc-style bracketed spans:
+
+```markdown
+# Basic class
+This has [highlighted text]{.highlight} for emphasis.
+
+# Multiple classes
+Here's [styled text]{.highlight .large} with two classes.
+
+# ID attribute
+Jump to [this section]{#anchor-point}.
+
+# Class and ID together
+[Important note]{.callout #note-1}
+
+# Custom attributes
+[Hover me]{.tooltip data-tip="More info here"}
+```
+
+Output structure:
+
+```js
+{
+  type: "text",
+  text: "highlighted text",
+  marks: [{ type: "span", attrs: { class: "highlight" } }]
+}
+```
+
+| Syntax | Result |
+|--------|--------|
+| `[text]{.class}` | `<span class="class">` |
+| `[text]{#id}` | `<span id="id">` |
+| `[text]{.a .b}` | `<span class="a b">` |
+| `[text]{key=value}` | `<span key="value">` |
+
+Spans can be combined with other marks (bold, italic, links).
+
 #### Legacy Prefix Syntax
 
 The original prefix syntax is still supported for backward compatibility:
