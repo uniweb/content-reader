@@ -148,16 +148,16 @@ function parseInline(token, schema, removeNewLine = false) {
     if (token.type === "image") {
         let role, src, iconLibrary, iconName;
 
-        // Check for icon protocol prefixes (lucide:, heroicons:, etc.)
-        const iconMatch = token.href.match(/^(lucide|heroicons|phosphor|tabler|feather|icon):(.+)$/);
+        // Check for icon library prefixes (lucide:, heroicons:, etc.)
+        // Note: 'icon:' is NOT included here - it's a role prefix, not a library
+        const iconMatch = token.href.match(/^(lucide|heroicons|phosphor|tabler|feather):(.+)$/);
         if (iconMatch) {
             iconLibrary = iconMatch[1];
             iconName = iconMatch[2];
             role = "icon";
-            // For known icon libraries, use the name; for generic 'icon:', use as URL
-            src = iconLibrary === "icon" ? iconName : null;
+            src = null; // Named icons don't have a src URL
         }
-        // Find the first colon to handle role:url format correctly (legacy syntax)
+        // Find the first colon to handle role:url format correctly (e.g., icon:path/to/file.svg)
         else if (token.href.includes(":") && !token.href.startsWith("http")) {
             const colonIndex = token.href.indexOf(":");
             role = token.href.substring(0, colonIndex);
