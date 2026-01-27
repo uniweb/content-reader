@@ -146,10 +146,19 @@ function parseInline(token, schema, removeNewLine = false) {
     }
 
     if (token.type === "image") {
-        let role, src;
+        let role, src, iconLibrary, iconName;
 
+        // Check for icon protocol prefixes (lucide:, heroicons:, etc.)
+        const iconMatch = token.href.match(/^(lucide|heroicons|phosphor|tabler|feather|icon):(.+)$/);
+        if (iconMatch) {
+            iconLibrary = iconMatch[1];
+            iconName = iconMatch[2];
+            role = "icon";
+            // For known icon libraries, use the name; for generic 'icon:', use as URL
+            src = iconLibrary === "icon" ? iconName : null;
+        }
         // Find the first colon to handle role:url format correctly (legacy syntax)
-        if (token.href.includes(":") && !token.href.startsWith("http")) {
+        else if (token.href.includes(":") && !token.href.startsWith("http")) {
             const colonIndex = token.href.indexOf(":");
             role = token.href.substring(0, colonIndex);
             src = token.href.substring(colonIndex + 1);
@@ -162,6 +171,7 @@ function parseInline(token, schema, removeNewLine = false) {
             role: attrRole,
             width,
             height,
+            size,         // Icon size (shorthand for width=height)
             loading,
             poster,       // For videos: explicit poster image
             preview,      // For PDFs/documents: preview image
@@ -171,6 +181,7 @@ function parseInline(token, schema, removeNewLine = false) {
             controls,
             fit,          // object-fit: cover, contain, etc.
             position,     // object-position
+            color,        // Icon color
             ...otherAttrs
         } = token.attrs || {};
 
@@ -185,6 +196,11 @@ function parseInline(token, schema, removeNewLine = false) {
                     caption: token.title || null,
                     alt: text || null,
                     role: finalRole,
+                    // Icon-specific attributes
+                    ...(iconLibrary && iconLibrary !== "icon" && { library: iconLibrary }),
+                    ...(iconName && { name: iconName }),
+                    ...(size && { size }),
+                    ...(color && { color }),
                     // Dimension attributes
                     ...(width && { width: parseInt(width, 10) || width }),
                     ...(height && { height: parseInt(height, 10) || height }),
