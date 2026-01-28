@@ -106,6 +106,7 @@ function parseInline(token, schema, removeNewLine = false) {
 
         // Extract known link/button attributes from curly brace attrs
         const {
+            role,     // Optional hint for components (e.g., "button", "nav")
             variant = "primary",
             download,
             target,
@@ -130,6 +131,7 @@ function parseInline(token, schema, removeNewLine = false) {
                         attrs: {
                             href,
                             title: token.title || null,
+                            ...(role && { role }),
                             ...(isButton && { variant }),
                             ...(download !== undefined && { download }),
                             ...(target && { target }),
