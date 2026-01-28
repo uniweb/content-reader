@@ -150,9 +150,22 @@ function parseInline(token, schema, removeNewLine = false) {
     if (token.type === "image") {
         let role, src, iconLibrary, iconName;
 
+        // Supported icon families - friendly names and direct react-icons codes
+        // The runtime maps friendly names to CDN paths
+        const ICON_FAMILIES = [
+            // Friendly names
+            'lucide', 'heroicons', 'heroicons2', 'phosphor', 'tabler', 'feather',
+            'fa', 'fa6', 'bootstrap', 'material-design', 'ant-design', 'remix',
+            'simple-icons', 'vscode', 'weather', 'game',
+            // Direct react-icons codes (power users)
+            'lu', 'hi', 'hi2', 'pi', 'tb', 'fi', 'bs', 'md', 'ai',
+            'ri', 'si', 'vsc', 'wi', 'gi'
+        ];
+        const iconFamilyPattern = ICON_FAMILIES.join('|');
+
         // Check for icon library prefixes (lucide:, heroicons:, etc.)
         // Note: 'icon:' is NOT included here - it's a role prefix, not a library
-        const iconMatch = token.href.match(/^(lucide|heroicons|phosphor|tabler|feather):(.+)$/);
+        const iconMatch = token.href.match(new RegExp(`^(${iconFamilyPattern}):(.+)$`));
         if (iconMatch) {
             iconLibrary = iconMatch[1];
             iconName = iconMatch[2];
