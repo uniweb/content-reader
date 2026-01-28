@@ -152,25 +152,37 @@ function parseInline(token, schema, removeNewLine = false) {
 
         // Supported icon families - friendly names and direct react-icons codes
         // The runtime maps friendly names to CDN paths
-        const ICON_FAMILIES = [
-            // Friendly names
+        const ICON_FAMILIES_FRIENDLY = [
             'lucide', 'heroicons', 'heroicons2', 'phosphor', 'tabler', 'feather',
             'fa', 'fa6', 'bootstrap', 'material-design', 'ant-design', 'remix',
-            'simple-icons', 'vscode', 'weather', 'game',
-            // Direct react-icons codes (power users)
-            'lu', 'hi', 'hi2', 'pi', 'tb', 'fi', 'bs', 'md', 'ai',
-            'ri', 'si', 'vsc', 'wi', 'gi'
+            'simple-icons', 'vscode', 'weather', 'game'
         ];
-        const iconFamilyPattern = ICON_FAMILIES.join('|');
+        const ICON_FAMILIES_SHORT = [
+            'lu', 'hi', 'hi2', 'pi', 'tb', 'fi', 'bs', 'md', 'ai',
+            'ri', 'si', 'vsc', 'wi', 'gi', 'fa', 'fa6'
+        ];
+        const allFamilies = [...ICON_FAMILIES_FRIENDLY, ...ICON_FAMILIES_SHORT];
+        const iconFamilyPattern = allFamilies.join('|');
+        const shortCodePattern = ICON_FAMILIES_SHORT.join('|');
 
-        // Check for icon library prefixes (lucide:, heroicons:, etc.)
+        // Check for colon format: lucide:house, lu:house
         // Note: 'icon:' is NOT included here - it's a role prefix, not a library
-        const iconMatch = token.href.match(new RegExp(`^(${iconFamilyPattern}):(.+)$`));
-        if (iconMatch) {
-            iconLibrary = iconMatch[1];
-            iconName = iconMatch[2];
+        const colonMatch = token.href.match(new RegExp(`^(${iconFamilyPattern}):(.+)$`));
+
+        // Check for dash format with short codes: lu-house, hi-arrow-right
+        // Only short codes (2-3 chars) to avoid ambiguity with regular paths
+        const dashMatch = !colonMatch && token.href.match(new RegExp(`^(${shortCodePattern})-(.+)$`));
+
+        if (colonMatch) {
+            iconLibrary = colonMatch[1];
+            iconName = colonMatch[2];
             role = "icon";
-            src = null; // Named icons don't have a src URL
+            src = null;
+        } else if (dashMatch) {
+            iconLibrary = dashMatch[1];
+            iconName = dashMatch[2];
+            role = "icon";
+            src = null;
         }
         // Find the first colon to handle role:url format correctly (e.g., icon:path/to/file.svg)
         else if (token.href.includes(":") && !token.href.startsWith("http")) {
