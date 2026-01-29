@@ -200,7 +200,9 @@ describe("Extended Syntax", () => {
   });
 
   test("parses images with roles", () => {
-    // Images are extracted from paragraphs to root level for component rendering
+    // Icons stay inline (inside paragraphs) so the semantic parser can
+    // associate them with adjacent links. Non-icon images are extracted
+    // to root level.
     const markdown = '![Alt Text](icon:path/to/image.svg "Caption text")';
     const result = markdownToProseMirror(markdown);
 
@@ -208,13 +210,58 @@ describe("Extended Syntax", () => {
       type: "doc",
       content: [
         {
-          type: "image",
-          attrs: {
-            src: "path/to/image.svg",
-            caption: "Caption text",
-            alt: "Alt Text",
-            role: "icon",
-          },
+          type: "paragraph",
+          content: [
+            {
+              type: "image",
+              attrs: {
+                src: "path/to/image.svg",
+                caption: "Caption text",
+                alt: "Alt Text",
+                role: "icon",
+              },
+            },
+          ],
+        },
+      ],
+    });
+  });
+
+  test("keeps icon inline with adjacent link for icon-link association", () => {
+    // Icons must stay inline so the semantic parser can associate them
+    // with adjacent links (iconBefore / iconAfter)
+    const markdown = "![](lu-home) [Sports](/sports)";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "image",
+              attrs: {
+                src: null,
+                caption: null,
+                alt: null,
+                role: "icon",
+                library: "lu",
+                name: "home",
+              },
+            },
+            { type: "text", text: " " },
+            {
+              type: "text",
+              text: "Sports",
+              marks: [
+                {
+                  type: "link",
+                  attrs: { href: "/sports", title: null },
+                },
+              ],
+            },
+          ],
         },
       ],
     });

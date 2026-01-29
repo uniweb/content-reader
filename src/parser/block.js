@@ -111,8 +111,10 @@ function parseBlock(token, schema) {
         let currentParagraph = null;
 
         content.forEach((element) => {
-            if (element.type === "image") {
-                // If there's an open paragraph, push it to the result before the image
+            if (element.type === "image" && element.attrs?.role !== "icon") {
+                // Extract non-icon images to root level so they become
+                // block-level elements. Icons stay inline so the semantic
+                // parser can associate them with adjacent links.
                 if (currentParagraph) {
                     result.push({
                         type: "paragraph",
