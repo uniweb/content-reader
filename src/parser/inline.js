@@ -155,11 +155,11 @@ function parseInline(token, schema, removeNewLine = false) {
         const ICON_FAMILIES_FRIENDLY = [
             'lucide', 'heroicons', 'heroicons2', 'phosphor', 'tabler', 'feather',
             'fa', 'fa6', 'bootstrap', 'material-design', 'ant-design', 'remix',
-            'simple-icons', 'vscode', 'weather', 'game'
+            'simple-icons', 'ionicons', 'boxicons', 'vscode', 'weather', 'game'
         ];
         const ICON_FAMILIES_SHORT = [
             'lu', 'hi', 'hi2', 'pi', 'tb', 'fi', 'bs', 'md', 'ai',
-            'ri', 'si', 'vsc', 'wi', 'gi', 'fa', 'fa6'
+            'ri', 'si', 'io5', 'bi', 'vsc', 'wi', 'gi', 'fa', 'fa6'
         ];
         const allFamilies = [...ICON_FAMILIES_FRIENDLY, ...ICON_FAMILIES_SHORT];
         const iconFamilyPattern = allFamilies.join('|');
