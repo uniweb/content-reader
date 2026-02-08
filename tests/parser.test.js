@@ -699,3 +699,87 @@ describe("Bracketed Spans", () => {
     expect(content[2].marks[0].attrs.class).toBe("muted");
   });
 });
+
+describe("Component References (@)", () => {
+  test("parses bare @ComponentName", () => {
+    const markdown = "![](@Hero)";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "inline_child_ref",
+          attrs: {
+            component: "Hero",
+            alt: null,
+          },
+        },
+      ],
+    });
+  });
+
+  test("parses @ComponentName with alt text and params", () => {
+    const markdown = "![Architecture diagram](@NetworkDiagram){variant=compact size=lg}";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result).toEqual({
+      type: "doc",
+      content: [
+        {
+          type: "inline_child_ref",
+          attrs: {
+            component: "NetworkDiagram",
+            alt: "Architecture diagram",
+            variant: "compact",
+            size: "lg",
+          },
+        },
+      ],
+    });
+  });
+
+  test("bare @ is treated as regular image", () => {
+    const markdown = "![](@)";
+    const result = markdownToProseMirror(markdown);
+
+    // Bare @ doesn't match component ref (length check), falls through to image
+    expect(result.content[0].type).toBe("image");
+  });
+
+  test("@ ref is lifted to block level (not inline in paragraph)", () => {
+    const markdown = "Some text before ![](@Widget) and after";
+    const result = markdownToProseMirror(markdown);
+
+    // inline_child_ref should be extracted from paragraph like images
+    const types = result.content.map((n) => n.type);
+    expect(types).toContain("inline_child_ref");
+    expect(types).toContain("paragraph");
+  });
+
+  test("icon syntax is not affected by @ detection", () => {
+    const markdown = "![](lu-house)";
+    const result = markdownToProseMirror(markdown);
+
+    // Icons still work as before
+    expect(result.content[0].type).toBe("paragraph");
+    expect(result.content[0].content[0].attrs.role).toBe("icon");
+    expect(result.content[0].content[0].attrs.library).toBe("lu");
+    expect(result.content[0].content[0].attrs.name).toBe("house");
+  });
+
+  test("multiple @ refs in same section", () => {
+    const markdown = "![](@Widget)\n\n![](@Chart)";
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content).toHaveLength(2);
+    expect(result.content[0]).toEqual({
+      type: "inline_child_ref",
+      attrs: { component: "Widget", alt: null },
+    });
+    expect(result.content[1]).toEqual({
+      type: "inline_child_ref",
+      attrs: { component: "Chart", alt: null },
+    });
+  });
+});

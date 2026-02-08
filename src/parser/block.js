@@ -111,7 +111,10 @@ function parseBlock(token, schema) {
         let currentParagraph = null;
 
         content.forEach((element) => {
-            if (element.type === "image" && element.attrs?.role !== "icon") {
+            if (
+                (element.type === "image" && element.attrs?.role !== "icon") ||
+                element.type === "inline_child_ref"
+            ) {
                 // Extract non-icon images to root level so they become
                 // block-level elements. Icons stay inline so the semantic
                 // parser can associate them with adjacent links.

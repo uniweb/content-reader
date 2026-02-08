@@ -148,6 +148,20 @@ function parseInline(token, schema, removeNewLine = false) {
     }
 
     if (token.type === "image") {
+        // Check for @ component reference: ![alt](@ComponentName){key=value}
+        if (token.href.startsWith('@') && token.href.length > 1) {
+            const component = token.href.slice(1)
+            const { role: _role, ...otherAttrs } = token.attrs || {}
+            return [{
+                type: "inline_child_ref",
+                attrs: {
+                    component,
+                    alt: text || null,
+                    ...otherAttrs,
+                },
+            }]
+        }
+
         let role, src, iconLibrary, iconName;
 
         // Supported icon families - friendly names and direct react-icons codes
