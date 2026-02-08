@@ -60,6 +60,22 @@ const baseNodes = {
         // group: "block inline",
     },
 
+    inset_ref: {
+        attrs: {
+            component: {},
+            alt: { default: null },
+            // Dynamic attributes from {key=value} syntax are also stored here
+        },
+        group: "block",
+    },
+
+    inset_placeholder: {
+        attrs: {
+            refId: {},
+        },
+        group: "block",
+    },
+
     divider: {
         attrs: {
             style: { default: "line" },

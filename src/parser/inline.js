@@ -153,7 +153,7 @@ function parseInline(token, schema, removeNewLine = false) {
             const component = token.href.slice(1)
             const { role: _role, ...otherAttrs } = token.attrs || {}
             return [{
-                type: "inline_child_ref",
+                type: "inset_ref",
                 attrs: {
                     component,
                     alt: text || null,
