@@ -113,8 +113,7 @@ function parseBlock(token, schema) {
         content.forEach((element) => {
             if (
                 (element.type === "image" && element.attrs?.role !== "icon") ||
-                element.type === "inset_ref" ||
-                element.type === "inline_child_ref"  // backward compat
+                element.type === "inset_ref"
             ) {
                 // Extract non-icon images to root level so they become
                 // block-level elements. Icons stay inline so the semantic
