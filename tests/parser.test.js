@@ -709,7 +709,7 @@ describe("Component References (@)", () => {
       type: "doc",
       content: [
         {
-          type: "inline_child_ref",
+          type: "inset_ref",
           attrs: {
             component: "Hero",
             alt: null,
@@ -727,7 +727,7 @@ describe("Component References (@)", () => {
       type: "doc",
       content: [
         {
-          type: "inline_child_ref",
+          type: "inset_ref",
           attrs: {
             component: "NetworkDiagram",
             alt: "Architecture diagram",
@@ -751,9 +751,9 @@ describe("Component References (@)", () => {
     const markdown = "Some text before ![](@Widget) and after";
     const result = markdownToProseMirror(markdown);
 
-    // inline_child_ref should be extracted from paragraph like images
+    // inset_ref should be extracted from paragraph like images
     const types = result.content.map((n) => n.type);
-    expect(types).toContain("inline_child_ref");
+    expect(types).toContain("inset_ref");
     expect(types).toContain("paragraph");
   });
 
@@ -774,11 +774,11 @@ describe("Component References (@)", () => {
 
     expect(result.content).toHaveLength(2);
     expect(result.content[0]).toEqual({
-      type: "inline_child_ref",
+      type: "inset_ref",
       attrs: { component: "Widget", alt: null },
     });
     expect(result.content[1]).toEqual({
-      type: "inline_child_ref",
+      type: "inset_ref",
       attrs: { component: "Chart", alt: null },
     });
   });
