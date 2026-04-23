@@ -197,12 +197,14 @@ function parseBlock(token, schema) {
 
         // Fenced ```math becomes a math_display node, not a codeBlock.
         // LaTeX compilation happens here (build-time) so runtime ships no
-        // math library.
+        // math library. A `:<id>` suffix (e.g. ```math:einstein) labels
+        // the equation for numbered cross-refs via <EquationRef>.
         if (language === "math") {
             const latex = rawText;
             return {
                 type: "math_display",
                 attrs: {
+                    ...(tag && { id: tag }),
                     latex,
                     mathml: latexToMathML(latex, { display: true }),
                 },

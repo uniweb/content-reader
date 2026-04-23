@@ -179,6 +179,10 @@ const baseNodes = {
         attrs: {
             latex: { default: "" },
             mathml: { default: "" },
+            // Optional label for numbered equations (set via ```math:<id> fence).
+            // Consumed by foundations that render numbered cross-referenceable
+            // equations from content.math — see @uniweb/scholar/math.
+            id: { default: null },
         },
         group: "block",
         atom: true,
@@ -187,6 +191,7 @@ const baseNodes = {
             {
                 tag: 'div[data-type="block-math"]',
                 getAttrs: (el) => ({
+                    id: el.getAttribute("data-id") || null,
                     latex: el.getAttribute("data-latex") || "",
                     mathml: el.innerHTML || "",
                 }),
@@ -199,12 +204,14 @@ const baseNodes = {
                     {
                         "data-type": "block-math",
                         "data-latex": node.attrs.latex,
+                        ...(node.attrs.id ? { "data-id": node.attrs.id } : {}),
                     },
                 ];
             }
             const div = document.createElement("div");
             div.setAttribute("data-type", "block-math");
             div.setAttribute("data-latex", node.attrs.latex);
+            if (node.attrs.id) div.setAttribute("data-id", node.attrs.id);
             const tpl = document.createElement("template");
             tpl.innerHTML = node.attrs.mathml || "";
             div.appendChild(tpl.content);
