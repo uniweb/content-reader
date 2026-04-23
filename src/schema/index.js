@@ -119,6 +119,98 @@ const baseNodes = {
         content: "inline*",
         group: "block",
     },
+
+    // Math nodes — LaTeX compiled to MathML Core at parse time.
+    // The `mathml` attr is the HTML string that flows through the content
+    // pipeline and lands in kit's HTML renderers via dangerouslySetInnerHTML.
+    // The `latex` attr is the source — kept for roundtrip (content-writer)
+    // and editor popover display.
+    math_inline: {
+        attrs: {
+            latex: { default: "" },
+            mathml: { default: "" },
+            // `display: true` marks mid-paragraph $$...$$ — rendered with
+            // displayMode styling but still occupying an inline slot.
+            // Preserves the Pandoc distinction through roundtrip.
+            display: { default: false },
+        },
+        group: "inline",
+        inline: true,
+        atom: true,
+        selectable: true,
+        // parseDOM recovers nodes from HTML previously produced by toDOM
+        // (copy/paste, Tiptap export). Alien pastes with only data-latex
+        // yield an empty mathml; a future normalisation pass can backfill
+        // via latexToMathML if needed. This runs in schema-consumer
+        // contexts that must stay Temml-free, so do not call it here.
+        parseDOM: [
+            {
+                tag: 'span[data-type="inline-math"]',
+                getAttrs: (el) => ({
+                    latex: el.getAttribute("data-latex") || "",
+                    mathml: el.innerHTML || "",
+                }),
+            },
+        ],
+        toDOM: (node) => {
+            // In non-DOM contexts (SSR, test suites without jsdom) return the
+            // spec form. The authoritative HTML serialiser for runtime is
+            // semantic-parser's getTextContent, not DOMSerializer.
+            if (typeof document === "undefined") {
+                return [
+                    "span",
+                    {
+                        "data-type": "inline-math",
+                        "data-latex": node.attrs.latex,
+                    },
+                ];
+            }
+            const span = document.createElement("span");
+            span.setAttribute("data-type", "inline-math");
+            span.setAttribute("data-latex", node.attrs.latex);
+            const tpl = document.createElement("template");
+            tpl.innerHTML = node.attrs.mathml || "";
+            span.appendChild(tpl.content);
+            return span;
+        },
+    },
+
+    math_display: {
+        attrs: {
+            latex: { default: "" },
+            mathml: { default: "" },
+        },
+        group: "block",
+        atom: true,
+        selectable: true,
+        parseDOM: [
+            {
+                tag: 'div[data-type="block-math"]',
+                getAttrs: (el) => ({
+                    latex: el.getAttribute("data-latex") || "",
+                    mathml: el.innerHTML || "",
+                }),
+            },
+        ],
+        toDOM: (node) => {
+            if (typeof document === "undefined") {
+                return [
+                    "div",
+                    {
+                        "data-type": "block-math",
+                        "data-latex": node.attrs.latex,
+                    },
+                ];
+            }
+            const div = document.createElement("div");
+            div.setAttribute("data-type", "block-math");
+            div.setAttribute("data-latex", node.attrs.latex);
+            const tpl = document.createElement("template");
+            tpl.innerHTML = node.attrs.mathml || "";
+            div.appendChild(tpl.content);
+            return div;
+        },
+    },
     // Table nodes
     table: {
         content: "tableRow+",

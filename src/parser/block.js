@@ -7,6 +7,7 @@ import yaml from "js-yaml";
 import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
+import { latexToMathML } from "../math/index.js";
 
 /**
  * Process code block info string (e.g., "json:tag-name")
@@ -178,9 +179,35 @@ function parseBlock(token, schema) {
         };
     }
 
+    // Custom math block token from the block-level marked extension
+    // ($$...$$ on its own line).
+    if (token.type === "mathBlock") {
+        return {
+            type: "math_display",
+            attrs: {
+                latex: token.latex || "",
+                mathml: token.mathml || "",
+            },
+        };
+    }
+
     if (token.type === "code") {
         const { language, tag } = processCodeInfo(token.lang);
         const rawText = cleanCodeText(token.text);
+
+        // Fenced ```math becomes a math_display node, not a codeBlock.
+        // LaTeX compilation happens here (build-time) so runtime ships no
+        // math library.
+        if (language === "math") {
+            const latex = rawText;
+            return {
+                type: "math_display",
+                attrs: {
+                    latex,
+                    mathml: latexToMathML(latex, { display: true }),
+                },
+            };
+        }
 
         // Tagged blocks become dataBlocks (structured data, not code for display)
         if (tag) {

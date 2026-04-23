@@ -44,6 +44,44 @@ function parseInline(token, schema, removeNewLine = false) {
         return [{ type: "text", text: token.raw }];
     } else if (token.type === "br") {
         return [{ type: "text", text: "\n" }];
+    } else if (token.type === "escape") {
+        // marked's built-in escape tokenizer produces { raw: "\\$", text: "$" }.
+        // Use the unescaped text, not raw, so "\$20" renders as "$20".
+        return token.text ? [{ type: "text", text: token.text }] : [];
+    }
+
+    // Custom math tokens from inline marked extensions.
+    // `mathInline` = $...$, `mathInlineDisplay` = $$...$$ mid-paragraph.
+    // Both emit `math_inline` ProseMirror nodes; the `display` attribute
+    // distinguishes them so content-writer can roundtrip faithfully.
+    if (token.type === "mathInline") {
+        return [
+            {
+                type: "math_inline",
+                attrs: {
+                    latex: token.latex || "",
+                    mathml: token.mathml || "",
+                    display: false,
+                },
+            },
+        ];
+    }
+    if (token.type === "mathInlineDisplay") {
+        // Mid-paragraph $$...$$ — Pandoc / GitHub treat this as display
+        // math that stays inline (no paragraph break). We model it as an
+        // inline node so it rides inside the paragraph content, with
+        // `display: true` so it renders with displayMode styling and
+        // roundtrips back to $$...$$.
+        return [
+            {
+                type: "math_inline",
+                attrs: {
+                    latex: token.latex || "",
+                    mathml: token.mathml || "",
+                    display: true,
+                },
+            },
+        ];
     }
 
     // Decode HTML entities

@@ -7,6 +7,7 @@
  */
 
 import { parseAttributeString } from './attributes.js'
+import { getMathExtensions } from './math.js'
 
 /**
  * Regex patterns for matching markdown elements with optional attributes
@@ -168,6 +169,7 @@ export function getMarkedExtensions() {
       createImageExtension(),
       createLinkExtension(),
       createSpanExtension(),
+      ...getMathExtensions(),
     ],
   }
 }
