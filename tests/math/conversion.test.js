@@ -48,9 +48,26 @@ describe("latexToMathML", () => {
   test("malformed input renders a temml-error span, not a throw", () => {
     const out = latexToMathML("\\frac{");
     expect(out).toContain("temml-error");
-    // The original (broken) source is retained inside the error span so
-    // the author sees what went wrong.
+    // The bad source is retained inside the span so the author sees what
+    // went wrong.
     expect(out).toContain("\\frac{");
+  });
+
+  test("error span strips Temml's ParseError tail and moves it to data-temml-error", () => {
+    const out = latexToMathML("\\frac{1}");
+    // The span itself must NOT render the parser message inline (that would
+    // show up as visible prose inside the page); the message lives on the
+    // data-temml-error attribute so foundations can surface it conditionally.
+    expect(out).toContain('data-temml-error=');
+    expect(out).toContain('ParseError');
+    // The white-space: pre-line declaration Temml adds is now meaningless
+    // (the tail is gone) and must not leak through.
+    expect(out).not.toContain('pre-line');
+    // The span's inner text is the bad source alone — no newlines, no
+    // parser message.
+    const spanMatch = out.match(/<span class="temml-error"[^>]*>([^<]*)<\/span>/);
+    expect(spanMatch).not.toBeNull();
+    expect(spanMatch[1]).toBe("\\frac{1}");
   });
 
   test("empty input returns a benign empty <math> element", () => {
