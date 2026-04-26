@@ -107,33 +107,49 @@ function parseBlock(token, schema) {
             return null;
         }
 
-        // extract images to the root level
+        // Detect "block-eligible" elements that may be hoisted to the
+        // document root rather than ride inside the paragraph:
+        //   - non-icon images (figures)
+        //   - inset_ref nodes with embedKind: 'visual' (the `!` form)
+        // Inline-textual inset_refs (embedKind: 'text', the `[text](@C)`
+        // / `[@key]{k=v}` forms) NEVER hoist — they're meant to render
+        // as words in prose. See kb/framework/plans/
+        // unipress-bibliography-via-citestyle.md §3.4.
+        const isBlockEligible = (el) =>
+            (el.type === "image" && el.attrs?.role !== "icon") ||
+            (el.type === "inset_ref" && el.attrs?.embedKind !== "text");
+
+        // Visual insets surrounded by other inline content (mid-prose
+        // badges, quotes, etc.) should stay inline. Only hoist visual
+        // insets when they appear in a paragraph that contains nothing
+        // else — that's the standalone `![alt](@Component){k=v}` line
+        // that authors mean to place as a block.
+        const onlyBlockEligible = content.every(
+            (el) => isBlockEligible(el) || (el.type === "text" && (!el.text || /^\s*$/.test(el.text)))
+        );
+        const blockEligibleCount = content.filter(isBlockEligible).length;
+        const hoist = onlyBlockEligible && blockEligibleCount > 0;
+
+        // extract images to the root level (when hoisting applies)
         const result = [];
         let currentParagraph = null;
 
         content.forEach((element) => {
-            if (
-                (element.type === "image" && element.attrs?.role !== "icon") ||
-                element.type === "inset_ref"
-            ) {
-                // Extract non-icon images to root level so they become
-                // block-level elements. Icons stay inline so the semantic
-                // parser can associate them with adjacent links.
+            if (hoist && isBlockEligible(element)) {
+                // Close the running paragraph (if any), then push the
+                // hoisted element directly to the document root.
                 if (currentParagraph) {
                     result.push({
                         type: "paragraph",
                         content: currentParagraph,
                     });
-                    currentParagraph = null; // Reset the current paragraph
+                    currentParagraph = null;
                 }
-                // Push the image directly to the result
                 result.push(element);
             } else {
-                // Start a new paragraph if there isn't one open
                 if (!currentParagraph) {
                     currentParagraph = [];
                 }
-                // Add the non-image element to the current paragraph
                 currentParagraph.push(element);
             }
         });

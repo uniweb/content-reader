@@ -134,7 +134,48 @@ function parseInline(token, schema, removeNewLine = false) {
         ];
     }
 
+    if (token.type === "cite") {
+        // Cite shorthand: `[@key]` / `[@key]{k=v}` / `[@a;@b]{k=v}`.
+        // Sugar for an inline `inset_ref` with component=Cite. Keys ride on
+        // a `key` attr (semicolon-separated when multi-cite). embedKind is
+        // 'text' — cites render as words in prose.
+        const { class: _class, ...otherAttrs } = token.attrs || {};
+        return [{
+            type: "inset_ref",
+            attrs: {
+                component: "Cite",
+                embedKind: "text",
+                key: token.text,
+                alt: null,
+                ...otherAttrs,
+            },
+        }];
+    }
+
     if (token.type === "link") {
+        // `[text](@Component){k=v}` — inline-textual inset. Same machinery
+        // as the image-form `![alt](@Component){k=v}` but `embedKind: 'text'`
+        // signals "render this component as a word in prose, not as an
+        // embedded visual element." Keyed-reference convention: a `text`
+        // starting with `@` is a key into a foundation-known collection
+        // (e.g. `[@darwin1859](@Cite){page=42}`).
+        if (token.href.startsWith('@') && token.href.length > 1) {
+            const component = token.href.slice(1);
+            const { role: _role, ...otherAttrs } = token.attrs || {};
+            const text = token.text || "";
+            const isKeyed = text.startsWith('@');
+            return [{
+                type: "inset_ref",
+                attrs: {
+                    component,
+                    embedKind: "text",
+                    alt: isKeyed ? null : (text || null),
+                    ...(isKeyed ? { key: text } : {}),
+                    ...otherAttrs,
+                },
+            }];
+        }
+
         // Check for button: prefix or .button class in attrs
         const hasButtonPrefix = token.href.startsWith("button:");
         const hasButtonClass = token.attrs?.class?.includes("button");
@@ -187,14 +228,22 @@ function parseInline(token, schema, removeNewLine = false) {
 
     if (token.type === "image") {
         // Check for @ component reference: ![alt](@ComponentName){key=value}
+        // The `!` form is the visual-embed inset — `embedKind: 'visual'`.
+        // block.js only block-extracts these when they're the sole element
+        // of a paragraph; mid-prose visual insets stay inline. The `[text](@C)`
+        // (no `!`) variant lives in the link branch above with embedKind: 'text'.
         if (token.href.startsWith('@') && token.href.length > 1) {
             const component = token.href.slice(1)
             const { role: _role, ...otherAttrs } = token.attrs || {}
+            const altText = text || ''
+            const isKeyed = altText.startsWith('@')
             return [{
                 type: "inset_ref",
                 attrs: {
                     component,
-                    alt: text || null,
+                    embedKind: "visual",
+                    alt: isKeyed ? null : (altText || null),
+                    ...(isKeyed ? { key: altText } : {}),
                     ...otherAttrs,
                 },
             }]
