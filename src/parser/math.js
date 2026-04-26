@@ -23,9 +23,11 @@
 import { latexToMathML } from '../math/index.js'
 
 // Block display: $$...$$ spanning one or more lines, terminated by a newline
-// or end-of-input. marked's block lexer calls this against the remaining
+// or end-of-input. Optionally followed by a `{#id ...attrs}` block on the
+// closing line — that's the cross-reference label form, picked up by the
+// xref-registry. marked's block lexer calls this against the remaining
 // source starting at the current block boundary.
-const BLOCK_DISPLAY = /^\$\$([\s\S]+?)\$\$(?:\s*\n|\s*$)/
+const BLOCK_DISPLAY = /^\$\$([\s\S]+?)\$\$(?:\s*\{([^}]+)\})?(?:\s*\n|\s*$)/
 
 // Inline display: $$...$$ within a paragraph, no newlines in body.
 const INLINE_DISPLAY = /^\$\$([^$\n]+?)\$\$/
@@ -52,14 +54,45 @@ export function createBlockMathExtension() {
       const m = BLOCK_DISPLAY.exec(src)
       if (!m) return
       const latex = m[1].trim()
+      const attrString = m[2]
+      const attrs = attrString ? parseAttributes(attrString) : null
       return {
         type: 'mathBlock',
         raw: m[0],
         latex,
         mathml: latexToMathML(latex, { display: true }),
+        ...(attrs && Object.keys(attrs).length > 0 ? { attrs } : {}),
       }
     },
   }
+}
+
+// Minimal attribute parser for `{#id key=value .class}` blocks. A
+// stripped-down mirror of parseAttributeString from attributes.js — kept
+// inline here so the math extension stays free of cross-imports during
+// SSR bundling. Recognized forms:
+//   #id            -> attrs.id = 'id'
+//   .className     -> attrs.class = 'className' (multiple .x .y join)
+//   key=value      -> attrs.key = 'value' (quotes optional)
+//   key            -> attrs.key = true (boolean flag)
+function parseAttributes(s) {
+  const attrs = {}
+  const re = /(?:#([\w-]+))|(?:\.([\w-]+))|(?:([\w-]+)=("[^"]*"|'[^']*'|[\w-]+))|(?:([\w-]+))(?=\s|$)/g
+  const classes = []
+  let m
+  while ((m = re.exec(s)) !== null) {
+    if (m[1]) attrs.id = m[1]
+    else if (m[2]) classes.push(m[2])
+    else if (m[3]) {
+      const v = m[4]
+      attrs[m[3]] =
+        v.startsWith('"') || v.startsWith("'") ? v.slice(1, -1) : v
+    } else if (m[5]) {
+      attrs[m[5]] = true
+    }
+  }
+  if (classes.length > 0) attrs.class = classes.join(' ')
+  return attrs
 }
 
 export function createInlineDisplayMathExtension() {

@@ -33,6 +33,14 @@ const PATTERNS = {
   // formatting); anything richer falls through to the span / link
   // tokenizers.
   cite: /^\[((?:@[\w-]+)(?:\s*;\s*@[\w-]+)*)\](?:\{([^}]*)\})?/,
+
+  // Ref shorthand: [#id]{attrs} or [#a;#b]{attrs}, attrs optional.
+  // Captures: ids (the #id list, semicolon-separated), attrs (optional).
+  // Sugar for [ids](@Ref){attrs} — inline-textual inset that resolves
+  // the id against the framework's per-document xref-registry. Authors
+  // declare labels via {#id} on a block element (heading, image,
+  // math_display, table) and reference them with this shorthand.
+  ref: /^\[((?:#[\w-]+)(?:\s*;\s*#[\w-]+)*)\](?:\{([^}]*)\})?/,
 }
 
 /**
@@ -139,11 +147,12 @@ export function createSpanExtension() {
       // Don't match images or links
       if (src.startsWith('![')) return
 
-      // Cede to the cite tokenizer for `[@<key>](...)` shapes — those
-      // are citation references, not generic spans. Marked treats both
-      // tokenizers as equally eligible at offset 0, so the span
-      // tokenizer has to opt out explicitly.
-      if (PATTERNS.cite.test(src)) return
+      // Cede to the cite and ref tokenizers for `[@<key>](...)` and
+      // `[#<id>](...)` shapes — those are citation / cross-reference
+      // forms, not generic spans. Marked treats the tokenizers as
+      // equally eligible at offset 0, so the span tokenizer has to opt
+      // out explicitly.
+      if (PATTERNS.cite.test(src) || PATTERNS.ref.test(src)) return
 
       // Check if this is a link [text](url) - if so, skip
       // We need to match span ONLY if there's no () after ]
@@ -219,6 +228,51 @@ export function createCiteExtension() {
 }
 
 /**
+ * Create a marked extension for the cross-reference shorthand `[#id]` /
+ * `[#id]{attrs}` / `[#a;#b]{attrs}`.
+ *
+ * Counterpart of the cite extension. The `#` sigil signals
+ * "look up in the framework's xref-registry", parallel to `@` for
+ * "look up in the foundation's bibliography." Compiles to an inline
+ * inset_ref with `component: 'Ref'`, the framework's built-in
+ * cross-reference renderer.
+ *
+ * Registered AFTER the cite extension and BEFORE the span extension —
+ * the span tokenizer cedes to both cite- and ref-shaped patterns
+ * explicitly so they win at the same start position.
+ *
+ * @returns {Object} Marked tokenizer extension
+ */
+export function createRefExtension() {
+  return {
+    name: 'ref',
+    level: 'inline',
+    start(src) {
+      // Match positions of `[#` — the ref shorthand always starts with
+      // an open-bracket immediately followed by `#`.
+      return src.indexOf('[#')
+    },
+    tokenizer(src) {
+      if (src.startsWith('![')) return
+      const match = PATTERNS.ref.exec(src)
+      if (!match) return
+      // Same guard the span tokenizer uses: if there's a `(` immediately
+      // after `]`, this is a link, not a ref.
+      const bracketEnd = src.indexOf(']')
+      if (bracketEnd > 0 && src[bracketEnd + 1] === '(') return
+      const [raw, ids, attrString] = match
+      const attrs = attrString ? parseAttributeString(attrString) : {}
+      return {
+        type: 'ref',
+        raw,
+        text: ids.replace(/\s+/g, ''),
+        attrs,
+      }
+    },
+  }
+}
+
+/**
  * Get all custom marked extensions
  *
  * @returns {Object} Marked extensions configuration
@@ -228,9 +282,11 @@ export function getMarkedExtensions() {
     extensions: [
       createImageExtension(),
       createLinkExtension(),
-      // Cite must run before span — `[@key]{k=v}` is a span-shaped
-      // pattern that we want to interpret as a cite, not a generic span.
+      // Cite + Ref must run before span — `[@key]{k=v}` and `[#id]{k=v}`
+      // are span-shaped patterns that we want to interpret as their
+      // dedicated forms, not as generic spans.
       createCiteExtension(),
+      createRefExtension(),
       createSpanExtension(),
       ...getMathExtensions(),
     ],

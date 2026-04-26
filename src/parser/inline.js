@@ -152,6 +152,26 @@ function parseInline(token, schema, removeNewLine = false) {
         }];
     }
 
+    if (token.type === "ref") {
+        // Cross-reference shorthand: `[#id]` / `[#id]{k=v}` / `[#a;#b]{k=v}`.
+        // Counterpart of the cite shorthand — same structural shape,
+        // different sigil and different lookup namespace. Sugar for an
+        // inline inset_ref with component='Ref'; the framework's <Ref>
+        // component resolves the id(s) via the per-document xref-registry
+        // populated from {#id} attributes on labeled elements.
+        const { class: _class, ...otherAttrs } = token.attrs || {};
+        return [{
+            type: "inset_ref",
+            attrs: {
+                component: "Ref",
+                embedKind: "text",
+                key: token.text,
+                alt: null,
+                ...otherAttrs,
+            },
+        }];
+    }
+
     if (token.type === "link") {
         // `[text](@Component){k=v}` — inline-textual inset. Same machinery
         // as the image-form `![alt](@Component){k=v}` but `embedKind: 'text'`
@@ -297,6 +317,7 @@ function parseInline(token, schema, removeNewLine = false) {
         // Extract known image attributes from curly brace attrs
         const {
             role: attrRole,
+            caption: attrCaption,  // {caption="…"} as attr — first-class slot
             width,
             height,
             size,         // Icon size (shorthand for width=height)
@@ -321,7 +342,11 @@ function parseInline(token, schema, removeNewLine = false) {
                 type: "image",
                 attrs: {
                     src,
-                    caption: token.title || null,
+                    // Caption can come from either the title slot
+                    // `![alt](src "title")` or the curly-brace attr
+                    // `![alt](src){caption="…"}`. The attr form takes
+                    // precedence — it's the supported author surface.
+                    caption: attrCaption || token.title || null,
                     alt: text || null,
                     role: finalRole,
                     // Icon-specific attributes

@@ -145,6 +145,108 @@ Output structure:
 
 Spans can be combined with other marks (bold, italic, links).
 
+#### Inline Insets — `[text](@Component)` and `![alt](@Component)`
+
+Inline references to foundation components, with two embed modes that
+differ in author intent and renderer treatment:
+
+```markdown
+# Textual inset (no `!`) — renders as a word in prose.
+As Darwin observed [in his classic work](@Cite){key=darwin1859}, the
+mechanism of selection acts on heritable variation.
+
+# Visual inset (with `!`) — renders as an inline visual element
+# (badge, pill, quote tile, etc.) embedded in the surrounding prose.
+This study has shipped ![New release](@Badge){type=success} and is
+ready for review.
+```
+
+| Form | `embedKind` | Use case |
+|---|---|---|
+| `[text](@Component){k=v}` | `'text'` | Textual substitution — component renders as words. |
+| `![alt](@Component){k=v}` | `'visual'` | Visual embed — inline visual element. |
+
+The `@` prefix on the URL slot is the disambiguator (no real URL starts
+with `@`). The two forms produce the same `inset_ref` node with
+`embedKind` distinguishing them; foundations may render the two modes
+differently or treat them identically.
+
+**Keyed-reference convention** — when the alt/text slot starts with
+`@`, the value rides on a `key=` attribute instead of `alt=`. Authors
+use this when the inset references an entry by id:
+
+```markdown
+![@hero-image](@Banner){variant=large}    # Banner with key=hero-image
+[@interview-bao](@Quote){length=short}    # Textual quote with key=interview-bao
+```
+
+Block-level placement: a `![alt](@Component){k=v}` on its own line is
+hoisted to the document root (same as standalone images). Mid-prose
+visual insets stay inline. Textual insets always stay inline.
+
+#### Citation Shorthand — `[@key]`
+
+Pandoc-style cite sugar that compiles to an inline `inset_ref` with
+`component: 'Cite'`. Used by foundations that ship a Cite renderer
+(see `@uniweb/book` for the reference implementation).
+
+```markdown
+As Darwin (1859) showed [@darwin1859]{suppress-author}, selection acts
+on heritable variation [@darwin1859]{page=42}. Independent contemporary
+work [@wallace1858; @lyell1830] reached compatible conclusions.
+```
+
+| Markdown | Compiles to |
+|---|---|
+| `[@key]` | `inset_ref { component: Cite, key: 'key', embedKind: text }` |
+| `[@key]{page=42}` | + `page: 42` |
+| `[@a; @b]` | `inset_ref { component: Cite, key: 'a;b', ... }` (multi-cite cluster) |
+| `[@key]{suppress-author}` | + `suppress-author: true` |
+
+#### Cross-reference Shorthand — `[#id]`
+
+Counterpart to the cite sugar, using `#` to look up internal labels in
+the framework's per-document cross-reference registry. Compiles to an
+`inset_ref` with `component: 'Ref'` — the framework's built-in
+cross-reference renderer that the runtime registers for every
+foundation.
+
+```markdown
+## Method {#sec-method}
+
+The method is described above (see [#sec-method]).
+
+![A cell undergoing mitosis](mitosis.png){#fig-cells caption="Mitosis."}
+
+We discuss this in [#sec-method] and [#fig-cells]{page=12}.
+
+The two figures together: [#fig-cells; #fig-meiosis].
+
+A missing ref renders as a visible placeholder: [#nope-typo] →
+"[?nope-typo]" with the failing key surfaced.
+```
+
+| Markdown | Renders as (humanities preset) |
+|---|---|
+| `[#fig-cells]` | Figure 3 |
+| `[#fig-cells]{page=12}` | Figure 3 (p. 12) |
+| `[#sec-method]` | §3.2 |
+| `[#eq-einstein]` | Equation 1 |
+| `[#a; #b]` | Figures 3 and 4 (same-kind cluster) |
+| `[#nope]` | [?nope] (visible missing-id placeholder) |
+
+The framework infers the kind from the host element type:
+
+| Element | Kind |
+|---|---|
+| Heading: `## Method {#id}` | `section` |
+| Image: `![alt](src){#id}` | `figure` |
+| Math display: `$$E=mc^2$$ {#id}` | `equation` |
+| Table with trailing `{#id}` | `table` |
+
+Foundations may declare additional kinds (theorem, exhibit, etc.) via
+their `xref.kinds` config; see the foundation's documentation.
+
 #### Legacy Prefix Syntax
 
 The original prefix syntax is still supported for backward compatibility:

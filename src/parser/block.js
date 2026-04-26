@@ -7,7 +7,34 @@ import yaml from "js-yaml";
 import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
+import { parseAttributeString } from "./attributes.js";
 import { latexToMathML } from "../math/index.js";
+
+/**
+ * Strip a trailing `{#id ...attrs}` block from a heading's inline
+ * children. Marked's built-in heading tokenizer doesn't parse attribute
+ * blocks, so we post-process the parsed inline content: if the last
+ * text node ends with `{...}`, peel it off, parse the attrs, and
+ * return them alongside the cleaned content.
+ */
+function extractTrailingHeadingAttrs(content) {
+  if (!Array.isArray(content) || content.length === 0) return { content, attrs: {} };
+  const last = content[content.length - 1];
+  if (last?.type !== "text" || typeof last.text !== "string") return { content, attrs: {} };
+  // Match a trailing `{...}` attribute block, optionally preceded by
+  // whitespace. The body is non-greedy and forbids `}` so we don't
+  // accidentally match across multiple attribute groups.
+  const m = /^([\s\S]*?)\s*\{([^}]+)\}\s*$/.exec(last.text);
+  if (!m) return { content, attrs: {} };
+  const cleaned = m[1].replace(/\s+$/, "");
+  const attrs = parseAttributeString(m[2]);
+  if (!attrs || Object.keys(attrs).length === 0) return { content, attrs: {} };
+  // Replace the last text node with the cleaned variant; drop entirely
+  // if cleaning left it empty.
+  const next = content.slice(0, -1);
+  if (cleaned.length > 0) next.push({ ...last, text: cleaned });
+  return { content: next, attrs };
+}
 
 /**
  * Process code block info string (e.g., "json:tag-name")
@@ -169,14 +196,20 @@ function parseBlock(token, schema) {
 
     if (token.type === "heading") {
         const headingContent = parseParagraph(token, schema);
-
+        // Pull a trailing `{#id ...}` attribute block off the heading's
+        // text — marked's built-in heading tokenizer treats it as part
+        // of the heading content. The {#id} is the cross-reference
+        // label, surfaced as `attrs.id`; other attrs (class, kind, …)
+        // ride alongside.
+        const { content: cleaned, attrs: trailingAttrs } = extractTrailingHeadingAttrs(headingContent);
         return {
             type: "heading",
             attrs: {
                 level: token.depth,
-                id: null,
+                id: trailingAttrs.id || null,
+                ...(trailingAttrs.class ? { class: trailingAttrs.class } : {}),
             },
-            content: headingContent,
+            content: cleaned,
         };
     }
 
@@ -196,14 +229,16 @@ function parseBlock(token, schema) {
     }
 
     // Custom math block token from the block-level marked extension
-    // ($$...$$ on its own line).
+    // ($$...$$ on its own line, optionally followed by {#id …attrs}).
     if (token.type === "mathBlock") {
+        const attrs = {
+            latex: token.latex || "",
+            mathml: token.mathml || "",
+        };
+        if (token.attrs?.id) attrs.id = token.attrs.id;
         return {
             type: "math_display",
-            attrs: {
-                latex: token.latex || "",
-                mathml: token.mathml || "",
-            },
+            attrs,
         };
     }
 
