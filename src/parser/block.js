@@ -7,7 +7,6 @@ import yaml from "js-yaml";
 import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
-import { parseAttributeString } from "./attributes.js";
 import { latexToMathML } from "../math/index.js";
 
 /**
@@ -21,30 +20,23 @@ function extractTrailingHeadingAttrs(content) {
   if (!Array.isArray(content) || content.length === 0) return { content, attrs: {} };
   const last = content[content.length - 1];
   if (last?.type !== "text" || typeof last.text !== "string") return { content, attrs: {} };
-  // Match a trailing `{...}` attribute block, optionally preceded by
-  // whitespace. The body is non-greedy and forbids `}` so we don't
-  // accidentally match across multiple attribute groups.
-  const m = /^([\s\S]*?)\s*\{([^}]+)\}\s*$/.exec(last.text);
-  if (!m) return { content, attrs: {} };
-  // Pandoc-shape gate: the first non-whitespace token must look like a
-  // class selector (`.foo`), an id selector (`#foo`), or a key=value
-  // pair (`role=hero`). Without this gate, parseAttributeString would
-  // happily eat trailing Loom expressions — `{INITIAL x.y}` matches its
-  // dotted-class alternative — and any bare `{x}` would match the
-  // boolean-key alternative. The full text would then be stripped from
-  // the heading, silently dropping the Loom expression.
+  // The only documented trailing-attribute form on a heading is the
+  // cross-reference label `{#id}` (see content-reader/README.md
+  // "Cross-reference Shorthand — [#id]" and the table that lists
+  // `## Method {#id}` -> kind: 'section'). The .class and key=value
+  // forms are syntactically valid in Pandoc but are not part of
+  // Press/Uniweb's heading surface — no markdown in this monorepo
+  // uses them, no downstream consumer reads them, and accepting them
+  // here would only re-create the trailing-Loom-expression bug class
+  // that motivated the original tightening.
   //
-  // Cases that pass: `.featured`, `#hero`, `#hero .featured`,
-  // `role=hero`, `role="hello world"`.
-  // Cases that back off: `foo.bar`, `INITIAL x.y`, `x`, `{...}`-wrapped
-  // Loom (`{SHOW publications.title}`).
-  const trimmedAttrs = m[2].trim();
-  if (!/^([.#][a-zA-Z_]|[a-zA-Z_][\w-]*\s*=)/.test(trimmedAttrs)) {
-    return { content, attrs: {} };
-  }
+  // Match strictly: `# Heading {#identifier}` with optional whitespace
+  // around the id. Anything else inside the braces (including `#id
+  // .class`) leaves the heading text untouched.
+  const m = /^([\s\S]*?)\s*\{\s*#([a-zA-Z_][\w-]*)\s*\}\s*$/.exec(last.text);
+  if (!m) return { content, attrs: {} };
   const cleaned = m[1].replace(/\s+$/, "");
-  const attrs = parseAttributeString(m[2]);
-  if (!attrs || Object.keys(attrs).length === 0) return { content, attrs: {} };
+  const attrs = { id: m[2] };
   // Replace the last text node with the cleaned variant; drop entirely
   // if cleaning left it empty.
   const next = content.slice(0, -1);
@@ -223,7 +215,6 @@ function parseBlock(token, schema) {
             attrs: {
                 level: token.depth,
                 id: trailingAttrs.id || null,
-                ...(trailingAttrs.class ? { class: trailingAttrs.class } : {}),
             },
             content: cleaned,
         };
