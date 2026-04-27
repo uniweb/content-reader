@@ -769,6 +769,9 @@ describe("Component References (@)", () => {
           type: "inset_ref",
           attrs: {
             component: "Hero",
+            // `!` prefix => visual embed (standalone-on-its-line form
+            // is hoisted to block level by the paragraph parser).
+            embedKind: "visual",
             alt: null,
           },
         },
@@ -787,6 +790,7 @@ describe("Component References (@)", () => {
           type: "inset_ref",
           attrs: {
             component: "NetworkDiagram",
+            embedKind: "visual",
             alt: "Architecture diagram",
             variant: "compact",
             size: "lg",
@@ -804,14 +808,28 @@ describe("Component References (@)", () => {
     expect(result.content[0].type).toBe("image");
   });
 
-  test("@ ref is lifted to block level (not inline in paragraph)", () => {
+  test("mid-prose @ ref STAYS inline (does not hoist)", () => {
     const markdown = "Some text before ![](@Widget) and after";
     const result = markdownToProseMirror(markdown);
 
-    // inset_ref should be extracted from paragraph like images
-    const types = result.content.map((n) => n.type);
-    expect(types).toContain("inset_ref");
-    expect(types).toContain("paragraph");
+    // Visual insets surrounded by other inline content stay inline —
+    // they're mid-prose badges/quotes that the author intentionally
+    // placed in the flow. Only standalone-on-their-line visual insets
+    // hoist to block level. See block.js's onlyBlockEligible check
+    // and kb/framework/plans/unipress-bibliography-via-citestyle.md
+    // §3.4.
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe("paragraph");
+    const inlineTypes = result.content[0].content.map((n) => n.type);
+    expect(inlineTypes).toEqual(["text", "inset_ref", "text"]);
+  });
+
+  test("standalone @ ref on its own line hoists to block level", () => {
+    const markdown = "![](@Widget)";
+    const result = markdownToProseMirror(markdown);
+    // Standalone visual inset hoists out of the wrapping paragraph.
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe("inset_ref");
   });
 
   test("icon syntax is not affected by @ detection", () => {
@@ -832,11 +850,11 @@ describe("Component References (@)", () => {
     expect(result.content).toHaveLength(2);
     expect(result.content[0]).toEqual({
       type: "inset_ref",
-      attrs: { component: "Widget", alt: null },
+      attrs: { component: "Widget", embedKind: "visual", alt: null },
     });
     expect(result.content[1]).toEqual({
       type: "inset_ref",
-      attrs: { component: "Chart", alt: null },
+      attrs: { component: "Chart", embedKind: "visual", alt: null },
     });
   });
 });
