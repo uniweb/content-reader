@@ -147,6 +147,63 @@ describe("Basic Markdown Parsing", () => {
     });
   });
 
+  // Pandoc-style trailing attribute blocks. The Pandoc-shape gate
+  // ensures these still get peeled off into heading.attrs.
+  test("peels off Pandoc-shaped trailing {#id .class} from headings", () => {
+    const cases = [
+      { md: "# Hero {.featured}", expectAttrs: { level: 1, id: null, class: "featured" }, expectText: "Hero" },
+      { md: "# Hero {#hero}", expectAttrs: { level: 1, id: "hero" }, expectText: "Hero" },
+      { md: "# Hero {#hero .featured}", expectAttrs: { level: 1, id: "hero", class: "featured" }, expectText: "Hero" },
+    ];
+    for (const { md, expectAttrs, expectText } of cases) {
+      const result = markdownToProseMirror(md);
+      expect(result.content[0].attrs).toEqual(expectAttrs);
+      expect(result.content[0].content).toEqual([{ type: "text", text: expectText }]);
+    }
+  });
+
+  // Regression: extractTrailingHeadingAttrs used to fire on any trailing
+  // `{...}` block, swallowing Loom expressions like `{INITIAL x.y}` and
+  // `{membership_information.position_title}` that share dotted-path syntax
+  // with Pandoc class selectors. The Pandoc-shape gate fixes this.
+  // See: bug report on @uniweb/content-reader@1.1.7.
+  test("preserves trailing Loom expressions on headings (Pandoc-shape gate)", () => {
+    const cases = [
+      // The original repro from the bug report — name + dotted Loom
+      // path at the end. Should keep the full text.
+      "# {INITIAL identification.first_name} {identification.family_name}, {membership_information.position_title}",
+      // Bare brace at end — should NOT match Pandoc shape.
+      "# Hello {x}",
+      // Dotted path at end — should NOT match (`.bar` after `foo` is
+      // not the same as a `.featured` class selector).
+      "# Hello {foo.bar}",
+      // Loom prefix-verb at end.
+      "# Hello {SHOW publications.title}",
+    ];
+    for (const md of cases) {
+      const result = markdownToProseMirror(md);
+      const heading = result.content[0];
+      expect(heading.type).toBe("heading");
+      // Heading shouldn't have a class or id pulled from the trailing
+      // brace block.
+      expect(heading.attrs.id).toBeNull();
+      expect(heading.attrs.class).toBeUndefined();
+      // The full original text after the `# ` should round-trip.
+      const original = md.replace(/^#\s+/, "");
+      const flat = heading.content.map((n) => n.text || "").join("");
+      expect(flat).toBe(original);
+    }
+  });
+
+  test("peels off key=value Pandoc attributes from headings", () => {
+    const result = markdownToProseMirror('# Hero {role=hero}');
+    expect(result.content[0].attrs).toEqual({ level: 1, id: null });
+    // role= is parsed by parseAttributeString as a generic attribute,
+    // surfaced through whatever attrs key it produces. Just confirm
+    // the heading text was peeled clean.
+    expect(result.content[0].content).toEqual([{ type: "text", text: "Hero" }]);
+  });
+
   test("parses links", () => {
     const markdown = '[Link text](https://example.com "Title")';
     const result = markdownToProseMirror(markdown);

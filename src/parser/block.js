@@ -26,6 +26,22 @@ function extractTrailingHeadingAttrs(content) {
   // accidentally match across multiple attribute groups.
   const m = /^([\s\S]*?)\s*\{([^}]+)\}\s*$/.exec(last.text);
   if (!m) return { content, attrs: {} };
+  // Pandoc-shape gate: the first non-whitespace token must look like a
+  // class selector (`.foo`), an id selector (`#foo`), or a key=value
+  // pair (`role=hero`). Without this gate, parseAttributeString would
+  // happily eat trailing Loom expressions — `{INITIAL x.y}` matches its
+  // dotted-class alternative — and any bare `{x}` would match the
+  // boolean-key alternative. The full text would then be stripped from
+  // the heading, silently dropping the Loom expression.
+  //
+  // Cases that pass: `.featured`, `#hero`, `#hero .featured`,
+  // `role=hero`, `role="hello world"`.
+  // Cases that back off: `foo.bar`, `INITIAL x.y`, `x`, `{...}`-wrapped
+  // Loom (`{SHOW publications.title}`).
+  const trimmedAttrs = m[2].trim();
+  if (!/^([.#][a-zA-Z_]|[a-zA-Z_][\w-]*\s*=)/.test(trimmedAttrs)) {
+    return { content, attrs: {} };
+  }
   const cleaned = m[1].replace(/\s+$/, "");
   const attrs = parseAttributeString(m[2]);
   if (!attrs || Object.keys(attrs).length === 0) return { content, attrs: {} };
