@@ -212,6 +212,7 @@ function parseInline(token, schema, removeNewLine = false) {
             rel,
             size,
             icon,
+            reload,
             ...otherAttrs
         } = token.attrs || {};
 
@@ -237,6 +238,7 @@ function parseInline(token, schema, removeNewLine = false) {
                             ...(rel && { rel }),
                             ...(size && { size }),
                             ...(icon && { icon }),
+                            ...(reload !== undefined && { reload }),
                             ...(className && { class: className }),
                         },
                     },
