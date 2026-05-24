@@ -148,8 +148,7 @@ function parseBlock(token, schema) {
         //   - inset_ref nodes with embedKind: 'visual' (the `!` form)
         // Inline-textual inset_refs (embedKind: 'text', the `[text](@C)`
         // / `[@key]{k=v}` forms) NEVER hoist — they're meant to render
-        // as words in prose. See kb/framework/plans/
-        // unipress-bibliography-via-citestyle.md §3.4.
+        // as words in prose.
         const isBlockEligible = (el) =>
             (el.type === "image" && el.attrs?.role !== "icon") ||
             (el.type === "inset_ref" && el.attrs?.embedKind !== "text");

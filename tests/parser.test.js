@@ -807,9 +807,7 @@ describe("Component References (@)", () => {
     // Visual insets surrounded by other inline content stay inline —
     // they're mid-prose badges/quotes that the author intentionally
     // placed in the flow. Only standalone-on-their-line visual insets
-    // hoist to block level. See block.js's onlyBlockEligible check
-    // and kb/framework/plans/unipress-bibliography-via-citestyle.md
-    // §3.4.
+    // hoist to block level. See block.js's onlyBlockEligible check.
     expect(result.content).toHaveLength(1);
     expect(result.content[0].type).toBe("paragraph");
     const inlineTypes = result.content[0].content.map((n) => n.type);
