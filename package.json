@@ -9,9 +9,9 @@
         "./math": "./src/math/index.js"
     },
     "scripts": {
-        "test": "NODE_OPTIONS=--experimental-vm-modules jest",
-        "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch",
-        "test-report": "NODE_OPTIONS=--experimental-vm-modules jest --json > test-results.json 2>&1"
+        "test": "vitest run",
+        "test:watch": "vitest",
+        "test-report": "vitest run --reporter=json --outputFile=test-results.json"
     },
     "keywords": [
         "markdown",
@@ -27,11 +27,7 @@
         "temml": "^0.13.2"
     },
     "devDependencies": {
-        "jest": "^29.7.0"
-    },
-    "jest": {
-        "testEnvironment": "node",
-        "verbose": true
+        "vitest": "^2.0.0"
     },
     "directories": {
         "test": "tests"
