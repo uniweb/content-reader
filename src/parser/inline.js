@@ -43,7 +43,12 @@ function parseInline(token, schema, removeNewLine = false) {
         // You might want to strip the < > or process them differently
         return [{ type: "text", text: token.raw }];
     } else if (token.type === "br") {
-        return [{ type: "text", text: "\n" }];
+        // A markdown hard break is a NODE, not a "\n" character. A raw newline
+        // is not a line break in HTML — white-space collapses it to a space —
+        // so a "\n" text node renders as a space, while semantic-parser turns
+        // `hardBreak` into <br>. The node form also survives a PM -> HTML -> PM
+        // round trip, which fuses the text nodes around a bare newline.
+        return [{ type: "hardBreak" }];
     } else if (token.type === "escape") {
         // marked's built-in escape tokenizer produces { raw: "\\$", text: "$" }.
         // Use the unescaped text, not raw, so "\$20" renders as "$20".

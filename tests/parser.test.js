@@ -848,3 +848,30 @@ describe("Component References (@)", () => {
     });
   });
 });
+
+describe("Line breaks", () => {
+  // A hard break is a NODE. It used to be a "\n" text node, which is a space
+  // in HTML and re-parses as a soft break — so the break was lost twice over.
+  test.each([
+    ["two trailing spaces", "line one  \nline two"],
+    ["backslash", "line one\\\nline two"],
+  ])("a hard break (%s) becomes a hardBreak node", (_label, markdown) => {
+    const result = markdownToProseMirror(markdown);
+
+    expect(result.content[0].content).toEqual([
+      { type: "text", text: "line one" },
+      { type: "hardBreak" },
+      { type: "text", text: "line two" },
+    ]);
+  });
+
+  test("a soft break stays inside the text node", () => {
+    // A single newline is a soft break — a space, not a line break. It must
+    // NOT become a hardBreak, or every wrapped paragraph grows a break.
+    const result = markdownToProseMirror("wrapped\nparagraph");
+
+    expect(result.content[0].content).toEqual([
+      { type: "text", text: "wrapped\nparagraph" },
+    ]);
+  });
+});
