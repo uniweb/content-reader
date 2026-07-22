@@ -222,27 +222,45 @@ function parseInline(token, schema, removeNewLine = false) {
             className = className.replace(/\bbutton\b/, "").trim() || undefined;
         }
 
+        const linkMark = {
+            type: isButton ? "button" : "link",
+            attrs: {
+                href,
+                title: token.title || null,
+                ...(role && { role }),
+                ...(isButton && { variant }),
+                ...(download !== undefined && { download }),
+                ...(target && { target }),
+                ...(rel && { rel }),
+                ...(size && { size }),
+                ...(icon && { icon }),
+                ...(reload !== undefined && { reload }),
+                ...(className && { class: className }),
+            },
+        };
+
+        // A link label is inline content, not a string: `[*Sense*](/x)` has to
+        // come out italic-and-linked, the way CommonMark specifies. Recurse
+        // into the label's own tokens and add the link mark to each resulting
+        // node — the same shape the strong/em handler above uses. Emitting one
+        // flat text node instead left the label's markup as literal asterisks.
+        //
+        // marked gives a single text token for a plain label, so the common
+        // case still produces exactly one node.
+        if (Array.isArray(token.tokens) && token.tokens.length > 0) {
+            const children = token.tokens.flatMap((t) =>
+                parseInline(t, schema, removeNewLine).map((node) => ({
+                    ...node,
+                    marks: [...(node.marks || []), linkMark],
+                })),
+            );
+            if (children.length > 0) return children;
+        }
+
         return [
             {
                 type: "text",
-                marks: [
-                    {
-                        type: isButton ? "button" : "link",
-                        attrs: {
-                            href,
-                            title: token.title || null,
-                            ...(role && { role }),
-                            ...(isButton && { variant }),
-                            ...(download !== undefined && { download }),
-                            ...(target && { target }),
-                            ...(rel && { rel }),
-                            ...(size && { size }),
-                            ...(icon && { icon }),
-                            ...(reload !== undefined && { reload }),
-                            ...(className && { class: className }),
-                        },
-                    },
-                ],
+                marks: [linkMark],
                 text,
             },
         ];

@@ -114,8 +114,11 @@ export function createLinkExtension() {
         href,
         title: title || null,
         attrs, // Extended: parsed attributes
-        // Include tokens for nested content
-        tokens: [],
+        // Tokenize the label. A link label is inline content, not a string —
+        // `[*Sense*](/x)` has to come out italic-and-linked, per CommonMark.
+        // This was hardcoded to [], so a label's own markup survived only as
+        // literal asterisks. `childTokens` below already declared the intent.
+        tokens: this.lexer.inlineTokens(text),
       }
     },
     childTokens: ['tokens'],
