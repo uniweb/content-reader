@@ -61,13 +61,7 @@ function parseListItemContent(item, schema) {
 
             for (const token of nestedTokens) {
                 if (token.type === "list") {
-                    content.push({
-                        type: token.ordered ? "orderedList" : "bulletList",
-                        ...(token.ordered && {
-                            attrs: { start: token.start || 1 },
-                        }),
-                        content: parseListItems(token.items, schema),
-                    });
+                    content.push(makeListNode(token, schema));
                 }
             }
         }
@@ -90,17 +84,44 @@ function parseListItems(items, schema) {
 }
 
 /**
+ * Build a ProseMirror list node from a marked list token.
+ *
+ * `loose` records whether the author separated items with blank lines — a
+ * list-level property in CommonMark, which is exactly how marked reports it
+ * (mixed spacing normalizes to one flag for the whole list). Without it a
+ * loose list re-serializes tight, so an editor sync quietly reflows the
+ * author's file.
+ *
+ * Only recorded when true, so the overwhelmingly common tight list keeps the
+ * document it has today. Additive: consumers read list content and `start` by
+ * name, and rendering does not branch on it — both spellings already produce
+ * the same output.
+ *
+ * @param {Object} token - List token
+ * @param {Object} schema - ProseMirror schema
+ * @returns {Object} ProseMirror list node
+ */
+function makeListNode(token, schema) {
+    const attrs = {
+        ...(token.ordered && { start: token.start || 1 }),
+        ...(token.loose && { loose: true }),
+    };
+
+    return {
+        type: token.ordered ? "orderedList" : "bulletList",
+        ...(Object.keys(attrs).length > 0 && { attrs }),
+        content: parseListItems(token.items, schema),
+    };
+}
+
+/**
  * Parse list block
  * @param {Object} token - List token
  * @param {Object} schema - ProseMirror schema
  * @returns {Object} ProseMirror list node
  */
 function parseList(token, schema) {
-    return {
-        type: token.ordered ? "orderedList" : "bulletList",
-        ...(token.ordered && { attrs: { start: token.start || 1 } }),
-        content: parseListItems(token.items, schema),
-    };
+    return makeListNode(token, schema);
 }
 
 export { parseList, parseListItems };
