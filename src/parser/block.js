@@ -128,6 +128,27 @@ function parseParagraph(token, schema) {
  * @param {Object} schema - ProseMirror schema
  * @returns {Object|null} ProseMirror block node or null if empty
  */
+/**
+ * Parse a list of tokens into a content array.
+ *
+ * parseBlock answers null for a token with no node of its own — the `space`
+ * marked emits for a blank line inside a blockquote, most often — and flatMap
+ * keeps a null return as a null element. Every caller therefore has to remember
+ * to drop them, and a null left in a content array reaches every downstream
+ * reader: the first one to touch node.attrs throws.
+ *
+ * Two callers existed and one remembered. So the walk lives here instead, and
+ * the next container node type — a callout, a figure — gets the guarantee
+ * without having to know about it.
+ *
+ * @param {Array} tokens - marked tokens
+ * @param {Object} schema - ProseMirror schema
+ * @returns {Array} Content nodes, with nothing empty in it
+ */
+function parseBlocks(tokens, schema) {
+    return (tokens || []).flatMap((token) => parseBlock(token, schema) ?? []);
+}
+
 function parseBlock(token, schema) {
     // console.log("BLOCK TOKEN: ", token);
     // Skip HTML comments
@@ -233,18 +254,9 @@ function parseBlock(token, schema) {
     }
 
     if (token.type === "blockquote") {
-        // parseBlock returns null for tokens with no node of their own — the
-        // `space` marked emits for the blank `>` line between a paragraph and a
-        // fence, most commonly. flatMap keeps a null return as a null element,
-        // so drop them here the way the top-level walker does (parser/index.js).
-        // A null left in a content array reaches every downstream reader, and
-        // the first one to touch node.attrs throws.
-        const content = token.tokens
-            .flatMap((t) => parseBlock(t, schema))
-            .filter(Boolean);
         return {
             type: "blockquote",
-            content,
+            content: parseBlocks(token.tokens, schema),
         };
     }
 
