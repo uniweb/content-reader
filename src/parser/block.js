@@ -233,7 +233,15 @@ function parseBlock(token, schema) {
     }
 
     if (token.type === "blockquote") {
-        const content = token.tokens.flatMap((t) => parseBlock(t, schema));
+        // parseBlock returns null for tokens with no node of their own — the
+        // `space` marked emits for the blank `>` line between a paragraph and a
+        // fence, most commonly. flatMap keeps a null return as a null element,
+        // so drop them here the way the top-level walker does (parser/index.js).
+        // A null left in a content array reaches every downstream reader, and
+        // the first one to touch node.attrs throws.
+        const content = token.tokens
+            .flatMap((t) => parseBlock(t, schema))
+            .filter(Boolean);
         return {
             type: "blockquote",
             content,
