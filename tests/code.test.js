@@ -35,10 +35,27 @@ describe("Code Parsing", () => {
           type: "dataBlock",  // Structured data, not code for display
           attrs: {
             tag: "nav-links",
+            // The serialization the author chose. Recorded so the block can be
+            // written back as they wrote it — without it, content-writer has
+            // only the parsed value and has to guess a format.
+            language: "json",
             data: [{ label: "Home" }],
           },
         },
       ],
+    });
+  });
+
+  test("records yaml as the data block's language", () => {
+    const result = markdownToProseMirror("```yaml:nav\n- label: Docs\n```");
+
+    expect(result.content[0]).toEqual({
+      type: "dataBlock",
+      attrs: {
+        tag: "nav",
+        language: "yaml",
+        data: [{ label: "Docs" }],
+      },
     });
   });
 

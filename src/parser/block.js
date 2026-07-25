@@ -305,10 +305,21 @@ function parseBlock(token, schema) {
         if (tag) {
             const parsedData = parseCodeBlockData(rawText, language);
             if (parsedData !== null) {
-                // Successfully parsed - it's a dataBlock
+                // Successfully parsed - it's a dataBlock.
+                //
+                // `language` rides along for the same reason it does on the two
+                // branches below: it is the serialization the author chose, and
+                // it is what `parseCodeBlockData` dispatched on. Without it a
+                // ```yaml:nav block has no way back — the parsed value alone
+                // cannot say whether it was written as YAML or JSON, so
+                // content-writer had to guess, and an author's YAML silently
+                // became JSON on an editor sync.
+                //
+                // Consumers read `tag` and `data` by name (the semantic parser
+                // does not spread attrs), so this reaches no rendered output.
                 return {
                     type: "dataBlock",
-                    attrs: { tag, data: parsedData },
+                    attrs: { tag, language, data: parsedData },
                 };
             }
             // Parsing failed - fall back to codeBlock with language for runtime fallback
