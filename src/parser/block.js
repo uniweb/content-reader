@@ -8,6 +8,28 @@ import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
 import { latexToMathML } from "../math/index.js";
+import { parseAttributeString } from "./attributes.js";
+
+/**
+ * Split a container fence's info string into its component and params.
+ *
+ * `@Alert{type=warning}` → `{ component: "Alert", type: "warning" }`
+ * `@Details`            → `{ component: "Details" }`
+ *
+ * Returns null when the info string is not a well-formed component token, so
+ * an odd fence falls through to an ordinary code block rather than becoming a
+ * container with a nonsense name.
+ *
+ * @param {string} info - The fence info string, starting with `@`
+ * @returns {Object|null}
+ */
+function parseContainerInfo(info) {
+    const match = /^@([A-Za-z][\w-]*)\s*(?:\{([^}]*)\})?\s*$/.exec(info);
+    if (!match) return null;
+
+    const [, component, attrString] = match;
+    return { component, ...parseAttributeString(attrString || "") };
+}
 
 /**
  * Strip a trailing `{#id ...attrs}` block from a heading's inline
@@ -284,6 +306,37 @@ function parseBlock(token, schema) {
     if (token.type === "code") {
         const { language, tag } = processCodeInfo(token.lang);
         const rawText = cleanCodeText(token.text);
+
+        // A fence whose info string names a component is a CONTAINER, not code:
+        //
+        //     ```@Alert{type=warning}
+        //     Body with **marks**, [links](/x), and blocks.
+        //     ```
+        //
+        // The block form of an inset. `![](@Component){params}` is an atom with
+        // no children (`agents.md` scopes insets to "self-contained,
+        // param-driven"), and child sections are file-level, so a callout
+        // between two paragraphs had nowhere to live.
+        //
+        // The info string is the inset's own token, byte for byte, so this is
+        // genuinely one concept at two levels. Purely additive: no language
+        // begins with `@`, and `processCodeInfo` splits on `:`, so an
+        // `@`-prefixed info string reaches here untouched.
+        if (typeof token.lang === "string" && token.lang.startsWith("@")) {
+            const container = parseContainerInfo(token.lang);
+            if (container) {
+                return {
+                    type: "inset_block",
+                    attrs: container,
+                    // The body is markdown, parsed as blocks. What a given
+                    // component may hold is the component's contract
+                    // (`meta.js` + `uniweb validate`), not the parser's guess —
+                    // truncating here would destroy authored prose to satisfy
+                    // a schema this parser cannot see.
+                    content: parseBlocks(marked.lexer(rawText), schema),
+                };
+            }
+        }
 
         // Fenced ```math becomes a math_display node, not a codeBlock.
         // LaTeX compilation happens here (build-time) so runtime ships no
