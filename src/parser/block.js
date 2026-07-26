@@ -339,7 +339,7 @@ function parseBlock(token, schema) {
     }
 
     if (token.type === "list") {
-        return parseList(token, schema);
+        return parseList(token, schema, parseBlock);
     }
 
     if (token.type === "table") {
