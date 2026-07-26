@@ -25,10 +25,15 @@ function parseInline(token, schema, removeNewLine = false) {
         return token.raw ? [{ type: "text", text: token.raw }] : [];
     }
 
-    if (token.type === "strong" || token.type === "em") {
+    if (token.type === "strong" || token.type === "em" || token.type === "del") {
         // Tiptap represents formatting as marks on text nodes
         // For nested formatting like **_text_**, all marks are applied to the same text node
-        const mark = { type: token.type === "strong" ? "bold" : "italic" };
+        //
+        // `del` is GFM's `~~text~~`. It was previously unhandled, so the
+        // tildes fell through as literal text — and the editor's `strike`
+        // mark, which is author-reachable, had nowhere to go on the way out.
+        const MARK_FOR = { strong: "bold", em: "italic", del: "strike" };
+        const mark = { type: MARK_FOR[token.type] };
 
         return token.tokens.flatMap((t) =>
             parseInline(t, schema, removeNewLine).map((node) => ({
