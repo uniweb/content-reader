@@ -263,7 +263,20 @@ function parseInline(token, schema, removeNewLine = false) {
             const children = token.tokens.flatMap((t) =>
                 parseInline(t, schema, removeNewLine).map((node) => ({
                     ...node,
-                    marks: [...(node.marks || []), linkMark],
+                    // A link cannot nest inside a link. marked autolinks a
+                    // bare URL even when that URL is the LABEL of an explicit
+                    // link, so `[http://x.com](/y)` arrives with a link mark
+                    // already on the label text and would end up carrying two.
+                    // Round-tripping a bare `http://x.com` produced exactly
+                    // that: the writer expands it to `[url](url)`, which then
+                    // reparsed with a doubled mark. The OUTER link wins — it
+                    // is the one the author wrote.
+                    marks: [
+                        ...(node.marks || []).filter(
+                            (m) => m.type !== "link" && m.type !== "button",
+                        ),
+                        linkMark,
+                    ],
                 })),
             );
             if (children.length > 0) return children;
