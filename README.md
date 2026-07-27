@@ -24,13 +24,12 @@ Add rich attributes to images and links using `{...}` syntax:
 ```markdown
 ![Alt](./image.jpg){role=hero width=800 loading=lazy}
 [Link](https://example.com){target=_blank rel=noopener}
-[Button](https://example.com){.button variant=secondary icon=arrow}
+[Button](https://example.com){button variant=secondary icon=arrow}
 ```
 
 **Supported attribute formats:**
 - `key=value` - Standard attribute
 - `key="value with spaces"` - Quoted value
-- `.className` - CSS class (multiple allowed)
 - `#idName` - Element ID
 - `booleanAttr` - Boolean attribute (sets to `true`)
 
@@ -50,7 +49,7 @@ Add rich attributes to images and links using `{...}` syntax:
 ![Background](./bg.jpg){fit=cover position=center loading=lazy}
 
 # Classes and IDs
-![Logo](./logo.svg){.featured .rounded #main-logo}
+![Logo](./logo.svg){#main-logo}
 ```
 
 | Attribute | Description |
@@ -63,7 +62,7 @@ Add rich attributes to images and links using `{...}` syntax:
 | `autoplay`, `muted`, `loop`, `controls` | Video playback options |
 | `fit` | Object-fit: `cover`, `contain`, `fill`, etc. |
 | `position` | Object-position value |
-| `.class`, `#id` | CSS class and ID |
+| `#id` | Cross-reference / anchor id |
 
 #### Link Attributes
 
@@ -83,16 +82,15 @@ Add rich attributes to images and links using `{...}` syntax:
 | `target` | Link target: `_blank`, `_self`, etc. |
 | `rel` | Link relationship: `noopener`, `noreferrer`, etc. |
 | `download` | Download attribute (boolean or filename) |
-| `.class` | CSS class |
 
 #### Button Attributes
 
-Buttons can be created using the `.button` class or the legacy `button:` prefix:
+Buttons can be created with the `button` flag or the legacy `button:` prefix:
 
 ```markdown
-# Using .button class (recommended)
-[Get Started](https://example.com){.button variant=primary size=lg}
-[Learn More](https://example.com){.button variant=secondary icon=arrow-right}
+# Using the button flag (recommended)
+[Get Started](https://example.com){button variant=primary size=lg}
+[Learn More](https://example.com){button variant=secondary icon=arrow-right}
 
 # Legacy prefix syntax (still supported)
 [Button Text](button:https://example.com)
@@ -138,7 +136,7 @@ Output structure:
 
 | Syntax | Result |
 |--------|--------|
-| `[text]{.class}` | `<span class="class">` |
+| `[text]{name}` | `<span name="true">` — an author label, styled via `theme.yml`'s `inline:` |
 | `[text]{#id}` | `<span id="id">` |
 | `[text]{.a .b}` | `<span class="a b">` |
 | `[text]{key=value}` | `<span key="value">` |
@@ -341,7 +339,7 @@ Create styled buttons and links with attributes:
 
 ```javascript
 const markdown = `
-[Get Started](https://example.com){.button variant=primary size=lg}
+[Get Started](https://example.com){button variant=primary size=lg}
 [Download](./file.pdf){download}
 [External](https://example.com){target=_blank rel=noopener}
 `;

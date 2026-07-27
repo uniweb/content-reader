@@ -1,16 +1,43 @@
 /**
  * @fileoverview Parse curly brace attributes from markdown
  *
- * Supports syntax like: {role=hero width=1200 .class #id autoplay}
+ * Supports syntax like: {role=hero width=1200 #id autoplay}
  *
  * Attribute types:
  * - key=value     → { key: "value" }
  * - key:value     → { key: "value" } (`:` is an accepted alias for `=`)
  * - key="value"   → { key: "value" } (quoted, allows spaces and commas)
  * - key='value'   → { key: "value" } (single quoted)
- * - .className    → added to classes array
  * - #idName       → { id: "idName" }
  * - booleanKey    → { booleanKey: true }
+ *
+ * ## There is no CSS-class syntax — a leading dot is part of the NAME
+ *
+ * `{.featured}` used to mean a CSS class and produced `class="featured"` in
+ * rendered output. It no longer does: a dot is an ordinary name character, so
+ * `{.featured}` is the boolean attribute `".featured"` and `{.one.two}` is the
+ * boolean attribute `".one.two"`.
+ *
+ * Author-supplied CSS classes were the one place markdown was taken LITERALLY.
+ * Everywhere else the foundation interprets: `#` is not `<h1>`, `**bold**` is
+ * not `font-weight:700`, `{accent}` is not a color. `class="featured"` was the
+ * exception, and it let content dictate presentation.
+ *
+ * Nothing is lost, because the better spelling already existed. A bare name is
+ * an open, multi-valued author label set that renders as a SEMANTIC attribute —
+ * `[x]{accent muted}` → `<span accent="true" muted="true">` — and sites declare
+ * what those names mean under `theme.yml`'s `inline:` key. An author who wrote
+ * `{.featured}` writes `{featured}`.
+ *
+ * Keeping the dot IN the name rather than stripping it is deliberate, and the
+ * reason is safety, not tidiness: stripping would turn `{.featured}` into
+ * `{featured: true}`, which would silently ACTIVATE a foundation's declared
+ * boolean param named `featured`. `.featured` matches no declared param, so it
+ * is inert. It is also lossless — stripping would drop `one` from `{.one.two}`.
+ *
+ * It round-trips with no special case on either side: content-writer's plain
+ * boolean branch serializes `{".featured": true}` straight back to
+ * `{.featured}`.
  *
  * Pairs are separated by whitespace, a comma, or both — `{a=1 b=2}`,
  * `{a=1, b=2}` and `{a=1,b=2}` are the same thing.
@@ -56,24 +83,26 @@ export function parseAttributeString(attrString) {
   }
 
   const attrs = {}
-  const classes = []
 
-  // Regex to match different attribute patterns
-  // Handles: key="value", key='value', key=value, key:value, .class, #id, boolean
+  // Regex to match different attribute patterns.
+  // Handles: key="value", key='value', key=value, key:value, #id, boolean.
+  //
+  // A NAME is a plain identifier or a dotted chain (`.featured`, `.one.two`) —
+  // the leading dot is part of the name, NOT a class marker (see the header).
+  // The same name shape is accepted in both the key and the boolean position.
+  //
   // A comma is a pair separator, so it terminates an unquoted value and can
   // follow a boolean flag.
-  const pattern = /(?:([a-zA-Z_][\w-]*)[=:](?:"([^"]*)"|'([^']*)'|([^\s},]+))|\.([a-zA-Z_][\w-]*)|#([a-zA-Z_][\w-]*)|([a-zA-Z_][\w-]*)(?=[\s,}]|$))/g
+  const pattern =
+    /(?:((?:\.[a-zA-Z_][\w-]*)+|[a-zA-Z_][\w-]*)[=:](?:"([^"]*)"|'([^']*)'|([^\s},]+))|#([a-zA-Z_][\w-]*)|((?:\.[a-zA-Z_][\w-]*)+|[a-zA-Z_][\w-]*)(?=[\s,}]|$))/g
 
   let match
   while ((match = pattern.exec(attrString)) !== null) {
-    const [, key, quotedDouble, quotedSingle, unquoted, className, idName, booleanKey] = match
+    const [, key, quotedDouble, quotedSingle, unquoted, idName, booleanKey] = match
 
     if (key) {
       // key=value attribute
       attrs[key] = quotedDouble ?? quotedSingle ?? unquoted
-    } else if (className) {
-      // .className
-      classes.push(className)
     } else if (idName) {
       // #id
       attrs.id = idName
@@ -81,11 +110,6 @@ export function parseAttributeString(attrString) {
       // boolean attribute (no value)
       attrs[booleanKey] = true
     }
-  }
-
-  // Add classes array if any were found
-  if (classes.length > 0) {
-    attrs.class = classes.join(' ')
   }
 
   return attrs

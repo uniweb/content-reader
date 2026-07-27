@@ -495,9 +495,10 @@ describe("Curly Brace Attributes", () => {
 
     expect(result.content[0]).toEqual({
       type: "image",
+      // `.featured` is no longer a class, and the image builder keeps only
+      // the names it knows — so a dotted label simply does not survive here.
       attrs: expect.objectContaining({
         src: "./logo.svg",
-        class: "featured",
         id: "main-logo",
       }),
     });
@@ -542,8 +543,8 @@ describe("Curly Brace Attributes", () => {
     });
   });
 
-  test("parses button with .button class", () => {
-    const markdown = "[Get Started](https://example.com){.button variant=secondary size=lg}";
+  test("parses button with the bare `button` flag", () => {
+    const markdown = "[Get Started](https://example.com){button variant=secondary size=lg}";
     const result = markdownToProseMirror(markdown);
 
     expect(result.content[0].content[0]).toEqual({
@@ -563,7 +564,7 @@ describe("Curly Brace Attributes", () => {
   });
 
   test("parses button with icon", () => {
-    const markdown = "[Learn More](https://example.com){.button icon=arrow-right}";
+    const markdown = "[Learn More](https://example.com){button icon=arrow-right}";
     const result = markdownToProseMirror(markdown);
 
     expect(result.content[0].content[0]).toEqual({
@@ -637,17 +638,16 @@ describe("Curly Brace Attributes", () => {
     });
   });
 
-  test("parses image with multiple classes", () => {
+  test("an image keeps only the names it knows — dotted labels do not survive", () => {
+    // There is no class syntax any more: a leading dot is part of the NAME, so
+    // these are three unknown boolean attributes, and the image node builder
+    // drops names it does not recognise.
     const markdown = "![Gallery](./photo.jpg){.featured .rounded .shadow}";
     const result = markdownToProseMirror(markdown);
 
-    expect(result.content[0]).toEqual({
-      type: "image",
-      attrs: expect.objectContaining({
-        src: "./photo.jpg",
-        class: "featured rounded shadow",
-      }),
-    });
+    expect(result.content[0].attrs.class).toBeUndefined();
+    expect(result.content[0].attrs[".featured"]).toBeUndefined();
+    expect(result.content[0].attrs.src).toBe("./photo.jpg");
   });
 
   test("parses booleans in different positions", () => {
@@ -677,7 +677,7 @@ describe("Bracketed Spans", () => {
       {
         type: "text",
         text: "highlighted text",
-        marks: [{ type: "span", attrs: { class: "highlight" } }],
+        marks: [{ type: "span", attrs: { ".highlight": true } }],
       },
       { type: "text", text: " in a sentence." },
     ]);
@@ -690,7 +690,7 @@ describe("Bracketed Spans", () => {
     expect(result.content[0].content[0]).toEqual({
       type: "text",
       text: "important note",
-      marks: [{ type: "span", attrs: { class: "callout bold" } }],
+      marks: [{ type: "span", attrs: { ".callout": true, ".bold": true } }],
     });
   });
 
@@ -701,7 +701,7 @@ describe("Bracketed Spans", () => {
     expect(result.content[0].content[0]).toEqual({
       type: "text",
       text: "This is less important",
-      marks: [{ type: "span", attrs: { class: "muted" } }],
+      marks: [{ type: "span", attrs: { ".muted": true } }],
     });
   });
 
@@ -712,7 +712,7 @@ describe("Bracketed Spans", () => {
     expect(result.content[0].content[0]).toEqual({
       type: "text",
       text: "key term",
-      marks: [{ type: "span", attrs: { class: "highlight", id: "glossary-term" } }],
+      marks: [{ type: "span", attrs: { ".highlight": true, id: "glossary-term" } }],
     });
   });
 
@@ -723,7 +723,7 @@ describe("Bracketed Spans", () => {
     expect(result.content[0].content[0]).toEqual({
       type: "text",
       text: "tooltip text",
-      marks: [{ type: "span", attrs: { class: "info", "data-tooltip": "More info" } }],
+      marks: [{ type: "span", attrs: { ".info": true, "data-tooltip": "More info" } }],
     });
   });
 
@@ -743,9 +743,9 @@ describe("Bracketed Spans", () => {
     const result = markdownToProseMirror(markdown);
 
     const content = result.content[0].content;
-    expect(content[0].marks[0].attrs.class).toBe("highlight");
+    expect(content[0].marks[0].attrs[".highlight"]).toBe(true);
     expect(content[1].text).toBe(" normal ");
-    expect(content[2].marks[0].attrs.class).toBe("muted");
+    expect(content[2].marks[0].attrs[".muted"]).toBe(true);
   });
 });
 

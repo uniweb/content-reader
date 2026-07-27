@@ -77,10 +77,10 @@ describe('pair separators', () => {
   })
 
   it('mixes both separators and both assignment forms', () => {
-    expect(attrs('type:warning, open .cls #x')).toEqual({
+    expect(attrs('type:warning, open flag #x')).toEqual({
       type: 'warning',
       open: true,
-      class: 'cls',
+      flag: true,
       id: 'x',
     })
   })
@@ -106,13 +106,50 @@ describe('values that contain a separator character', () => {
 })
 
 describe('the other forms still work', () => {
-  it('reads .class, #id, quoted values and boolean flags', () => {
-    expect(attrs('.one .two #main role="a b" lazy')).toEqual({
-      class: 'one two',
+  it('reads #id, quoted values and boolean flags', () => {
+    expect(attrs('#main role="a b" lazy')).toEqual({
       id: 'main',
       role: 'a b',
       lazy: true,
     })
+  })
+})
+
+describe('there is no class syntax — a leading dot is part of the NAME', () => {
+  // `{.featured}` used to mean a CSS class and rendered as class="featured",
+  // the one place markdown was taken literally. Now the dot is an ordinary
+  // name character, so this is simply the boolean attribute ".featured".
+  it('reads a dotted name as one boolean attribute', () => {
+    expect(attrs('.featured')).toEqual({ '.featured': true })
+  })
+
+  it('keeps the whole chain of a compact dotted name', () => {
+    // Stripping the dot would have dropped `one` here. Keeping it is lossless.
+    expect(attrs('.one.two')).toEqual({ '.one.two': true })
+  })
+
+  it('reads several dotted names as several attributes', () => {
+    expect(attrs('.a .b')).toEqual({ '.a': true, '.b': true })
+    expect(attrs('.a, .b')).toEqual({ '.a': true, '.b': true })
+  })
+
+  it('never produces a `class` attribute', () => {
+    expect(attrs('.featured .rounded')).not.toHaveProperty('class')
+  })
+
+  it('does NOT collapse a dotted name onto the undotted one', () => {
+    // The reason the dot is kept rather than stripped: `{.featured}` must not
+    // become `{featured: true}`, which would silently ACTIVATE a foundation's
+    // declared boolean param named `featured`. A dotted name matches no
+    // declared param, so it is inert.
+    // NB: assert on key lists, not toHaveProperty — it reads a dot as a
+    // nested-path separator, so `toHaveProperty('.featured')` never matches.
+    expect(Object.keys(attrs('.featured'))).toEqual(['.featured'])
+    expect(Object.keys(attrs('featured'))).toEqual(['featured'])
+  })
+
+  it('still takes a value, with the dot part of the key', () => {
+    expect(attrs('.featured=yes')).toEqual({ '.featured': 'yes' })
   })
 })
 
@@ -152,6 +189,8 @@ describe('the two implementations agree', () => {
     'flag',
     'flag, other',
     '#main .cls a:1, flag',
+    '.featured',
+    '.one.two',
     'a="x y"',
     'note : warning',
   ]

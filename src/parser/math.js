@@ -72,11 +72,11 @@ export function createBlockMathExtension() {
 // inline here so the math extension stays free of cross-imports during
 // SSR bundling. Recognized forms:
 //   #id            -> attrs.id = 'id'
-//   .className     -> attrs.class = 'className' (multiple .x .y join)
 //   key=value      -> attrs.key = 'value' (quotes optional)
 //   key:value      -> same; `:` is an accepted alias for `=`
 //   key            -> attrs.key = true (boolean flag)
-// Pairs separate on whitespace, a comma, or both.
+// Pairs separate on whitespace, a comma, or both. A leading dot is part of the
+// NAME, not a CSS class: `{.featured}` is the boolean attribute '.featured'.
 //
 // MIRROR: the accepted syntax must match parseAttributeString in
 // attributes.js — see the rationale in that file's header. A change to one
@@ -84,21 +84,19 @@ export function createBlockMathExtension() {
 // a display-math block. tests/attributes.test.js pins the two together.
 export function parseAttributes(s) {
   const attrs = {}
-  const re = /(?:#([\w-]+))|(?:\.([\w-]+))|(?:([\w-]+)[=:]("[^"]*"|'[^']*'|[\w-]+))|(?:([\w-]+))(?=[\s,}]|$)/g
-  const classes = []
+  const re =
+    /(?:#([\w-]+))|(?:((?:\.[\w-]+)+|[\w-]+)[=:]("[^"]*"|'[^']*'|[\w-]+))|(?:((?:\.[\w-]+)+|[\w-]+))(?=[\s,}]|$)/g
   let m
   while ((m = re.exec(s)) !== null) {
     if (m[1]) attrs.id = m[1]
-    else if (m[2]) classes.push(m[2])
-    else if (m[3]) {
-      const v = m[4]
-      attrs[m[3]] =
+    else if (m[2]) {
+      const v = m[3]
+      attrs[m[2]] =
         v.startsWith('"') || v.startsWith("'") ? v.slice(1, -1) : v
-    } else if (m[5]) {
-      attrs[m[5]] = true
+    } else if (m[4]) {
+      attrs[m[4]] = true
     }
   }
-  if (classes.length > 0) attrs.class = classes.join(' ')
   return attrs
 }
 

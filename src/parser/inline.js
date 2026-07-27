@@ -206,15 +206,19 @@ function parseInline(token, schema, removeNewLine = false) {
             }];
         }
 
-        // Check for button: prefix or .button class in attrs
+        // A link becomes a button via the `button:` href prefix or a bare
+        // `button` flag — `[Go](/x){button}`, the same author-label form as
+        // `{accent}`. This replaces the old `.button` CSS-class spelling,
+        // which went with the rest of the class syntax (see attributes.js).
         const hasButtonPrefix = token.href.startsWith("button:");
-        const hasButtonClass = token.attrs?.class?.includes("button");
-        const isButton = hasButtonPrefix || hasButtonClass;
+        const hasButtonFlag = token.attrs?.button === true;
+        const isButton = hasButtonPrefix || hasButtonFlag;
 
         const href = hasButtonPrefix ? token.href.substring(7) : token.href;
 
         // Extract known link/button attributes from curly brace attrs
         const {
+            button: _buttonFlag,  // consumed above as the type indicator
             role,     // Optional hint for components (e.g., "button", "nav")
             variant = "primary",
             download,
@@ -226,11 +230,9 @@ function parseInline(token, schema, removeNewLine = false) {
             ...otherAttrs
         } = token.attrs || {};
 
-        // Remove 'button' from class if present (it's used as a type indicator)
-        let className = otherAttrs.class;
-        if (className) {
-            className = className.replace(/\bbutton\b/, "").trim() || undefined;
-        }
+        // `class` is no longer produced by the attribute syntax, but an
+        // editor-authored node can still carry one — pass it through untouched.
+        const className = otherAttrs.class;
 
         const linkMark = {
             type: isButton ? "button" : "link",
