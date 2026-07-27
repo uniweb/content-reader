@@ -5,11 +5,43 @@
  *
  * Attribute types:
  * - key=value     → { key: "value" }
- * - key="value"   → { key: "value" } (quoted, allows spaces)
+ * - key:value     → { key: "value" } (`:` is an accepted alias for `=`)
+ * - key="value"   → { key: "value" } (quoted, allows spaces and commas)
  * - key='value'   → { key: "value" } (single quoted)
  * - .className    → added to classes array
  * - #idName       → { id: "idName" }
  * - booleanKey    → { booleanKey: true }
+ *
+ * Pairs are separated by whitespace, a comma, or both — `{a=1 b=2}`,
+ * `{a=1, b=2}` and `{a=1,b=2}` are the same thing.
+ *
+ * ## Why `:` and `,` are accepted
+ *
+ * Not to offer choice — to stop a near-miss from parsing as something else.
+ * Both forms are what a reader of YAML, CSS or JSON reaches for by reflex, and
+ * before this each one failed SILENTLY rather than loudly:
+ *
+ *   {type:warning}  →  { warning: true }   `type` was skipped, then `warning`
+ *                                          matched the bare-flag branch
+ *   {a=1, b=2}      →  { a: "1,", b: "2" } the comma was swallowed into the
+ *                                          unquoted value
+ *
+ * Neither raised anything. An author got a component with the wrong params and
+ * no indication why. Widening the accepted syntax is the cheap fix; the
+ * alternative — detecting and reporting an unconsumed remainder — is a bigger
+ * change to a parser five tokenizers share.
+ *
+ * The separator is tight ON PURPOSE: `[=:]` must follow the key immediately.
+ * Allowing `{note : warning}` would make a pair and two boolean flags
+ * indistinguishable, which trades one silent misparse for another.
+ *
+ * A comma inside a value therefore needs quoting — `{style="a, b"}`. That is
+ * the one thing this widening takes away, and nothing in the corpus used it.
+ *
+ * NOTE: `parseAttributes` in ./math.js is a deliberate inline MIRROR of this
+ * function (kept cross-import-free for SSR bundling). Any change to the
+ * accepted syntax must be made in both, and `tests/attributes.test.js` pins
+ * them to each other.
  */
 
 /**
@@ -27,8 +59,10 @@ export function parseAttributeString(attrString) {
   const classes = []
 
   // Regex to match different attribute patterns
-  // Handles: key="value", key='value', key=value, .class, #id, boolean
-  const pattern = /(?:([a-zA-Z_][\w-]*)=(?:"([^"]*)"|'([^']*)'|([^\s}]+))|\.([a-zA-Z_][\w-]*)|#([a-zA-Z_][\w-]*)|([a-zA-Z_][\w-]*)(?=\s|$))/g
+  // Handles: key="value", key='value', key=value, key:value, .class, #id, boolean
+  // A comma is a pair separator, so it terminates an unquoted value and can
+  // follow a boolean flag.
+  const pattern = /(?:([a-zA-Z_][\w-]*)[=:](?:"([^"]*)"|'([^']*)'|([^\s},]+))|\.([a-zA-Z_][\w-]*)|#([a-zA-Z_][\w-]*)|([a-zA-Z_][\w-]*)(?=[\s,}]|$))/g
 
   let match
   while ((match = pattern.exec(attrString)) !== null) {

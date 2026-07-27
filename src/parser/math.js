@@ -74,10 +74,17 @@ export function createBlockMathExtension() {
 //   #id            -> attrs.id = 'id'
 //   .className     -> attrs.class = 'className' (multiple .x .y join)
 //   key=value      -> attrs.key = 'value' (quotes optional)
+//   key:value      -> same; `:` is an accepted alias for `=`
 //   key            -> attrs.key = true (boolean flag)
-function parseAttributes(s) {
+// Pairs separate on whitespace, a comma, or both.
+//
+// MIRROR: the accepted syntax must match parseAttributeString in
+// attributes.js — see the rationale in that file's header. A change to one
+// without the other means `{a:1}` works on an image and silently does not on
+// a display-math block. tests/attributes.test.js pins the two together.
+export function parseAttributes(s) {
   const attrs = {}
-  const re = /(?:#([\w-]+))|(?:\.([\w-]+))|(?:([\w-]+)=("[^"]*"|'[^']*'|[\w-]+))|(?:([\w-]+))(?=\s|$)/g
+  const re = /(?:#([\w-]+))|(?:\.([\w-]+))|(?:([\w-]+)[=:]("[^"]*"|'[^']*'|[\w-]+))|(?:([\w-]+))(?=[\s,}]|$)/g
   const classes = []
   let m
   while ((m = re.exec(s)) !== null) {
