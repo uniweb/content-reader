@@ -109,6 +109,60 @@ describe('schema parity: every emitted type is declared', () => {
     expect(undeclared).toEqual([])
   })
 
+  // Types whose attribute set is INTENTIONALLY open-ended, so an attr sweep
+  // must not police them. Each carries author-supplied `{key=value}` names that
+  // cannot be enumerated ahead of time — for `span` the attribute NAME is the
+  // payload (see src/schema/index.js). Everything else is closed: a new attr
+  // there is a declaration someone forgot.
+  const OPEN_ATTR_TYPES = new Set(['span', 'inset_ref', 'inset_block'])
+
+  test('every emitted ATTRIBUTE is declared, for closed types', () => {
+    // Types alone are not enough. `image` emitted `library` and `name` — the
+    // icon reference from `![](lu-house)` — for months while declaring 17 other
+    // attrs, so a consumer generating its schema from this inventory would
+    // build a node that silently drops an icon's identity on load. A
+    // type-level guard cannot see that; this one can.
+    const declaredAttrs = (kind, type) =>
+      new Set(Object.keys((kind === 'node' ? schema.nodes : schema.marks)[type]?.attrs || {}))
+
+    const undeclared = []
+    for (const [name, md] of Object.entries(CORPUS)) {
+      const visit = (n) => {
+        if (!n || typeof n !== 'object') return
+        if (Array.isArray(n)) return n.forEach(visit)
+        if (n.type && n.attrs && !OPEN_ATTR_TYPES.has(n.type)) {
+          const dec = declaredAttrs('node', n.type)
+          for (const a of Object.keys(n.attrs)) {
+            if (!dec.has(a)) undeclared.push(`node ${n.type}.${a} (CORPUS.${name})`)
+          }
+        }
+        for (const m of n.marks || []) {
+          if (!m?.attrs || OPEN_ATTR_TYPES.has(m.type)) continue
+          const dec = declaredAttrs('mark', m.type)
+          for (const a of Object.keys(m.attrs)) {
+            if (!dec.has(a)) undeclared.push(`mark ${m.type}.${a} (CORPUS.${name})`)
+          }
+        }
+        if (n.content) visit(n.content)
+      }
+      visit(markdownToProseMirror(md))
+    }
+    expect([...new Set(undeclared)]).toEqual([])
+  })
+
+  test('an icon keeps its reference — library + name, not a resolved glyph', () => {
+    // `![](lu-house)` is a REFERENCE. A consumer that drops these two attrs
+    // (or inlines a resolved SVG instead) freezes the glyph and loses the
+    // ability to re-theme or re-resolve it — the same failure shape as
+    // substituting a resolved colour for a span's attribute name.
+    const doc = markdownToProseMirror('![](lu-house)\n')
+    const img = doc.content.flatMap((n) => (n.type === 'image' ? [n] : n.content || [])).find((n) => n?.type === 'image')
+    expect(img.attrs.role).toBe('icon')
+    expect(img.attrs.library).toBe('lu')
+    expect(img.attrs.name).toBe('house')
+    expect(Object.keys(schema.nodes.image.attrs)).toEqual(expect.arrayContaining(['library', 'name']))
+  })
+
   // The three that were missing when this guard was written. Named explicitly
   // so a regression points at the incident rather than at a bare set diff.
   test.each([

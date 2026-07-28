@@ -37,6 +37,14 @@ const baseNodes = {
             caption: { default: null },
             alt: { default: null },
             role: { default: "image" }, // image, icon, hero, video, pdf, etc.
+            // Icon reference — `![](lu-house)` yields role:"icon" with a null
+            // `src` and the glyph named instead: `library` is the family prefix
+            // ("lu", "hi", "hi2", …) and `name` the icon within it. The pair is
+            // a REFERENCE, not a payload: a consumer resolves it to markup at
+            // render time, so preserving both is what keeps the icon swappable.
+            // Inlining the resolved SVG in their place freezes it.
+            library: { default: null },
+            name: { default: null },
             // Dimension attributes
             width: { default: null },
             height: { default: null },
@@ -97,8 +105,18 @@ const baseNodes = {
         group: "block",
     },
 
-    // List nodes
+    // List nodes.
+    //
+    // `loose` records the markdown distinction between a tight list (items are
+    // bare inline content) and a loose one (blank lines between items, so each
+    // item wraps its content in a paragraph). It is set only when true, so its
+    // absence means tight. Content, not presentation: it is a property of what
+    // the author wrote, and dropping it silently re-tightens the list on the
+    // next write.
     bulletList: {
+        attrs: {
+            loose: { default: false },
+        },
         content: "listItem+",
         group: "block",
     },
@@ -106,6 +124,7 @@ const baseNodes = {
     orderedList: {
         attrs: {
             start: { default: 1 },
+            loose: { default: false },
         },
         content: "listItem+",
         group: "block",
