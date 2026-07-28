@@ -76,6 +76,19 @@ const baseNodes = {
         group: "block",
     },
 
+    // Block form of an inset — a ```@Component{params} fence (parser/block.js
+    // `parseContainerInfo`). The same token as `inset_ref`, one level up: it
+    // holds parsed block content, so a callout can wrap prose instead of being
+    // a self-contained atom.
+    inset_block: {
+        attrs: {
+            component: {},
+            // Dynamic attributes from {key=value} syntax are also stored here
+        },
+        content: "block+",
+        group: "block",
+    },
+
     divider: {
         attrs: {
             style: { default: "line" },
@@ -274,6 +287,29 @@ const baseMarks = {
         // For inline code
         inclusive: true,
         code: true,
+    },
+
+    strike: {},
+
+    // Bracketed span — `[text]{accent}` / `[text]{.cls key=value}`
+    // (parser/inline.js, token type "span").
+    //
+    // Attribute names are OPEN-ENDED, and the NAME is the payload: `{accent}`
+    // yields `attrs: { accent: true }`, and theme.yml's `inline:` block
+    // generates a matching `span[accent] { … }` rule (@uniweb/theming's
+    // css-generator). So an attribute name IS the binding between authored
+    // text and the site's theme — half of one theme-driven feature, not
+    // decoration.
+    //
+    // Consumers must round-trip unknown attribute names VERBATIM. Substituting
+    // a resolved value (e.g. mapping to a literal colour) freezes a theme-bound
+    // style and takes the site's theme out of the loop permanently.
+    span: {
+        attrs: {
+            class: { default: null },
+            id: { default: null },
+            // Any other `{name}` / `{key=value}` pair is stored here too
+        },
     },
 };
 

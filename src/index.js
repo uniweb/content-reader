@@ -24,3 +24,14 @@ function markdownToProseMirror(markdown) {
 }
 
 export { markdownToProseMirror, isValidUniwebMarkdown };
+
+// The framework's canonical ProseMirror dialect, as data: `{ nodes, marks }`
+// with each type's attrs and defaults, TipTap-v2 shaped.
+//
+// Exported because it is a CONTRACT, not an internal: anything that renders or
+// edits this content — a rich-text editor, a converter, any third-party tool —
+// needs to know which types exist before it can tell "unknown because
+// unregistered" from "unknown because malformed". The first is safe to preserve
+// opaquely and write back verbatim; the second is not.
+// `tests/schema-parity.test.js` keeps this honest against what the parser emits.
+export { getBaseSchema };
