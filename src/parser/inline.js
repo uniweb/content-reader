@@ -111,7 +111,13 @@ function parseInline(token, schema, removeNewLine = false) {
     }
 
     if (token.type === "span") {
-        // Bracketed span: [text]{.class}
+        // Bracketed span: [text]{accent}, [text]{class=lead}, [text]{.any-name}
+        //
+        // NOT `[text]{.class}` — a leading dot is part of the attribute NAME and
+        // carries no special meaning, so `{.lead}` yields `{".lead": true}`, an
+        // inert boolean. The CSS-class shorthand was retired with the rest of the
+        // class syntax (see the header of ./attributes.js).
+        //
         // Supports nested formatting via tokens
         const { class: className, id, ...otherAttrs } = token.attrs || {};
 
@@ -230,8 +236,19 @@ function parseInline(token, schema, removeNewLine = false) {
             ...otherAttrs
         } = token.attrs || {};
 
-        // `class` is no longer produced by the attribute syntax, but an
-        // editor-authored node can still carry one — pass it through untouched.
+        // `class` survives as an INTEROP path, not an authoring feature.
+        //
+        // The CSS-class *shorthand* (`{.featured}`) is retired — a leading dot is
+        // now part of the attribute name and means nothing. But the explicit
+        // `{class=x}` spelling is still parsed here, deliberately: it is one half
+        // of a matched pair with `@uniweb/content-writer`, which serializes a
+        // class back out as `{class=x}`. That pair is what lets a class on an
+        // EDITOR-authored node survive a round trip through the file lane.
+        //
+        // (An earlier version of this comment claimed `class` was "no longer
+        // produced by the attribute syntax". That was never true of the explicit
+        // spelling — the tokenizer has no filter on the literal key `class`.
+        // Decision to keep the pair and correct the comment: Diego, 2026-07-29.)
         const className = otherAttrs.class;
 
         const linkMark = {
@@ -369,6 +386,11 @@ function parseInline(token, schema, removeNewLine = false) {
             loading,
             poster,       // For videos: explicit poster image
             preview,      // For PDFs/documents: preview image
+            // For documents (role=pdf): metadata an embed renders beside the
+            // preview. `description` is NOT `alt` — alt describes the *image*
+            // for assistive tech, this describes the *resource*.
+            author,
+            description,
             autoplay,
             muted,
             loop,
@@ -407,6 +429,8 @@ function parseInline(token, schema, removeNewLine = false) {
                     // Media attributes (for video/document roles)
                     ...(poster && { poster }),
                     ...(preview && { preview }),
+                    ...(author && { author }),
+                    ...(description && { description }),
                     // Video-specific attributes
                     ...(autoplay !== undefined && { autoplay }),
                     ...(muted !== undefined && { muted }),
@@ -415,7 +439,19 @@ function parseInline(token, schema, removeNewLine = false) {
                     // Styling attributes
                     ...(fit && { fit }),
                     ...(position && { position }),
-                    // Any other custom attributes
+                    // EXACTLY these two, not "any other custom attribute" — the
+                    // image node is a CLOSED content model, so `{data-x=1}` is
+                    // tokenized and then dropped here. Neither of these is a
+                    // leftover:
+                    //   `id`    — load-bearing. `{#fig-cells}` is the figure
+                    //             cross-reference anchor: kit's xref registry
+                    //             reads `attrs.id` and maps image → figure, which
+                    //             is what renders "Figure 3". Press relies on it
+                    //             for text→image references.
+                    //   `class` — an interop path, not an authoring feature; the
+                    //             matched half of content-writer's `{class=x}`
+                    //             output, so an editor-authored class survives a
+                    //             round trip. The `{.featured}` shorthand is gone.
                     ...(otherAttrs.class && { class: otherAttrs.class }),
                     ...(otherAttrs.id && { id: otherAttrs.id }),
                 },

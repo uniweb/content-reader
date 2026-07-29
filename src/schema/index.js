@@ -21,13 +21,23 @@ const baseNodes = {
         group: "block",
     },
 
-    eyebrowHeading: {
-        content: "inline*",
-        group: "block",
-    },
-
     text: {
         group: "inline",
+    },
+
+    // Emitted for BOTH markdown hard-break spellings (two trailing spaces, and a
+    // trailing backslash) — see the codec doc's "Hard breaks" invariant. A bare
+    // "\n" text node is a SOFT break and deliberately stays a text node; healing
+    // one into a hardBreak writes a trailing `\` into the author's file.
+    //
+    // Declared 2026-07-29 after it was found EMITTED-but-UNDECLARED: the parity
+    // test's `hardBreak` corpus entry used a single "\n", which produces no
+    // hardBreak at all, so the suite stayed green while the type escaped the
+    // inventory that consumers generate their schemas from.
+    hardBreak: {
+        inline: true,
+        group: "inline",
+        selectable: false,
     },
 
     image: {
@@ -53,6 +63,20 @@ const baseNodes = {
             // Media attributes (for video/document roles)
             poster: { default: null },  // Explicit poster image for videos
             preview: { default: null }, // Preview image for PDFs/documents
+            // Document metadata (role=pdf) — what an embed renders beside the
+            // preview. `description` is deliberately NOT `alt`: alt describes
+            // the *image* for assistive tech; this describes the *resource*.
+            //
+            // Added 2026-07-29 for the editor's `document` node, which folds
+            // into this row rather than becoming a type of its own. That is the
+            // same move `role=video` already made — this node's attribute set is
+            // the UNION of its roles' needs (video contributed `poster`,
+            // `autoplay`, `muted`, `loop`, `controls`; documents contributed
+            // `preview`). "Closed" here means enumerable, not frozen: a named,
+            // documented attr for a first-class role is not the arbitrary
+            // passthrough the closure exists to prevent.
+            author: { default: null },
+            description: { default: null },
             // Video-specific attributes
             autoplay: { default: null },
             muted: { default: null },
@@ -69,6 +93,8 @@ const baseNodes = {
     },
 
     inset_ref: {
+        // OPEN attribute set — see `openAttrs` below.
+        openAttrs: true,
         attrs: {
             component: {},
             alt: { default: null },
@@ -89,6 +115,9 @@ const baseNodes = {
     // holds parsed block content, so a callout can wrap prose instead of being
     // a self-contained atom.
     inset_block: {
+        // OPEN attribute set — see `openAttrs` below. `{type=warning}` and every
+        // other container param rides here alongside `component`.
+        openAttrs: true,
         attrs: {
             component: {},
             // Dynamic attributes from {key=value} syntax are also stored here
@@ -136,6 +165,31 @@ const baseNodes = {
     },
 
     // Code blocks
+    // A TAGGED fence — ```yaml:Card — parsed at read time into structured data.
+    // Distinct from `codeBlock`, which is source to display: this is data to
+    // consume, and `<Prose>` deliberately skips it so a component can read it
+    // from `content.data[tag]` instead.
+    //
+    // Declared 2026-07-29 after it was found EMITTED-but-UNDECLARED — the third
+    // instance of that class (after `hardBreak` and the corpus gap that hid it),
+    // and the highest-consequence one: a consumer that rejects unknown types
+    // fails the WHOLE document, and a tagged data block is something authors
+    // reach for deliberately rather than an edge case.
+    //
+    // `data` is the parsed value and is intentionally unconstrained (any YAML or
+    // JSON shape). It is passed through opaquely — nothing downstream re-parses
+    // a string inside it as markdown, which is why rich prose belongs in content
+    // (items, or an `inset_block` body) rather than in here.
+    dataBlock: {
+        attrs: {
+            tag: {},
+            language: { default: null },
+            data: { default: null },
+        },
+        group: "block",
+        atom: true,
+    },
+
     codeBlock: {
         attrs: {
             language: { default: null },
@@ -324,6 +378,9 @@ const baseMarks = {
     // a resolved value (e.g. mapping to a literal colour) freezes a theme-bound
     // style and takes the site's theme out of the loop permanently.
     span: {
+        // OPEN attribute set — and here the attribute NAME is the payload:
+        // `[text]{accent}` binds to theme.yml's `inline:` block by that name.
+        openAttrs: true,
         attrs: {
             class: { default: null },
             id: { default: null },

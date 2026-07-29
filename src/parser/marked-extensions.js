@@ -12,14 +12,39 @@ import { getMathExtensions } from './math.js'
 /**
  * Regex patterns for matching markdown elements with optional attributes
  */
+// A link/image destination: ordinary characters, OR one balanced `(…)` group.
+//
+// The naive `[^)"'\s]+` stops at the FIRST `)`, which silently truncates every
+// URL containing parentheses — `…/wiki/Turing_(machine)` became
+// `…/wiki/Turing_(machine`. CommonMark allows balanced parens in a destination,
+// and it is a common real shape (Wikipedia disambiguators above all). Worse, the
+// early stop also swallowed a trailing attribute block: `[x](/a_(b)){#id}`
+// dropped `{#id}` entirely, because the regex had already committed to ending at
+// the inner `)`.
+//
+// ONE nesting level — a regex cannot match arbitrary balanced nesting. Deeper
+// nesting (`a_(b_(c))`) does not fail: this pattern simply does not match, so the
+// token falls through to marked's own link tokenizer, which is full CommonMark
+// and gets the href right. The cost of that fallback is that marked knows nothing
+// about our `{attrs}` syntax, so **the attribute block is silently dropped** —
+// measured, not assumed. One level covers the real shapes (Wikipedia
+// disambiguators); the deeper case degrades to correct-href/no-attrs rather than
+// to a truncation.
+//
+// Two known gaps remain, NOT addressed here because both need handling in the
+// tokenizer body rather than the pattern: the `<…>` destination form (the angle
+// brackets are kept literally in the href) and backslash escaping (`\(` stays
+// `\(`). Neither truncates any more.
+const DESTINATION = String.raw`(?:[^()"'\s]|\([^()\s]*\))+`
+
 const PATTERNS = {
   // Image: ![alt](src "title"){attrs}
   // Captures: alt, src, title (optional), attrs (optional)
-  image: /^!\[([^\]]*)\]\(([^)"'\s]+)(?:\s+["']([^"']*)["'])?\)(?:\{([^}]*)\})?/,
+  image: new RegExp(String.raw`^!\[([^\]]*)\]\((${DESTINATION})(?:\s+["']([^"']*)["'])?\)(?:\{([^}]*)\})?`),
 
   // Link: [text](href "title"){attrs}
   // Captures: text, href, title (optional), attrs (optional)
-  link: /^\[([^\]]+)\]\(([^)"'\s]+)(?:\s+["']([^"']*)["'])?\)(?:\{([^}]*)\})?/,
+  link: new RegExp(String.raw`^\[([^\]]+)\]\((${DESTINATION})(?:\s+["']([^"']*)["'])?\)(?:\{([^}]*)\})?`),
 
   // Span (bracketed span): [text]{attrs}
   // Pandoc-style bracketed spans - text with attributes but no href

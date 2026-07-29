@@ -40,11 +40,24 @@ const CORPUS = {
   inlineMarks: 'Text **bold** *ital* `code` ~~strike~~ and [link](/a).\n',
   bracketedSpan: '# Ready to [get started]{accent}?\n',
   spanWithClassAndKey: 'A [phrase]{.lead size=lg} here.\n',
-  hardBreak: 'line one\nline two\n',
+  // BOTH spellings, and they must stay literal. A single "\n" here is a SOFT
+  // break — it produces no hardBreak node at all, so this entry named the
+  // construct while testing something else, and `hardBreak` escaped the
+  // inventory undeclared with the suite green. That is the corpus bound in this
+  // file's header, fired: coverage is `emitted-by-CORPUS ⊆ declared`, so an
+  // entry that does not produce what it is named for silently narrows it.
+  hardBreakTwoSpaces: 'line one  \nline two\n',
+  hardBreakBackslash: 'line one\\\nline two\n',
+  softBreakStaysText: 'line one\nline two\n',
   bulletList: '- a\n- b\n',
   orderedList: '1. one\n2. two\n',
   looseList: '- para one\n\n- para two\n',
   codeBlock: '```js\nconst x = 1\n```\n',
+  // A TAGGED fence is a `dataBlock`, not a `codeBlock` — a separate emitted type
+  // that escaped the inventory entirely until 2026-07-29 because no corpus entry
+  // produced one. Both spellings, since the reader dispatches on the tag.
+  dataBlockYaml: '```yaml:Card\ntitle: Hello\n```\n',
+  dataBlockJson: '```json:Form\n{ "fields": [] }\n```\n',
   blockquote: '> quoted **text**\n',
   divider: 'before\n\n---\n\nafter\n',
   image: '![alt](/img.png){width=100}\n',
@@ -114,7 +127,24 @@ describe('schema parity: every emitted type is declared', () => {
   // cannot be enumerated ahead of time — for `span` the attribute NAME is the
   // payload (see src/schema/index.js). Everything else is closed: a new attr
   // there is a declaration someone forgot.
-  const OPEN_ATTR_TYPES = new Set(['span', 'inset_ref', 'inset_block'])
+  //
+  // DERIVED from the schema's own `openAttrs` marker rather than hardcoded here.
+  // A second list is a second thing to forget: a consumer generating an adapter
+  // reads the schema, so if this test's notion of "open" and the schema's ever
+  // disagreed, the test would be policing a contract nobody publishes. Found by
+  // the frontend (channel `frontend-framework-5a47`), who read the declared attr
+  // list for `inset_block`, saw only `component`, and correctly asked whether the
+  // openness was deliberate or an omission — it was deliberate and unstated.
+  const OPEN_ATTR_TYPES = new Set([
+    ...Object.entries(schema.nodes).filter(([, def]) => def?.openAttrs).map(([type]) => type),
+    ...Object.entries(schema.marks).filter(([, def]) => def?.openAttrs).map(([type]) => type),
+  ])
+
+  test('the open-attribute types are declared as such in the schema', () => {
+    // Not a tautology: it pins WHICH types are open, so opening a new one is a
+    // deliberate edit here rather than a quiet way past the attribute sweep.
+    expect([...OPEN_ATTR_TYPES].sort()).toEqual(['inset_block', 'inset_ref', 'span'])
+  })
 
   test('every emitted ATTRIBUTE is declared, for closed types', () => {
     // Types alone are not enough. `image` emitted `library` and `name` — the

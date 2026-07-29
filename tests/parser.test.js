@@ -224,6 +224,55 @@ describe("Basic Markdown Parsing", () => {
       ],
     });
   });
+
+  // A destination containing parentheses. The naive `[^)"'\s]+` capture stopped at
+  // the FIRST `)`, so every such URL was silently truncated on the page —
+  // `…/wiki/Turing_(machine)` became `…/wiki/Turing_(machine`. Wikipedia
+  // disambiguators are the common real shape, which is why this is not exotic.
+  const hrefOf = (md) => {
+    const doc = markdownToProseMirror(md);
+    let href;
+    const walk = (n) => {
+      if (!n || typeof n !== "object") return;
+      if (Array.isArray(n)) return n.forEach(walk);
+      for (const m of n.marks || []) if (m.attrs?.href) href = m.attrs.href;
+      if (n.content) walk(n.content);
+    };
+    walk(doc);
+    return href;
+  };
+
+  test("a link destination keeps balanced parentheses", () => {
+    expect(hrefOf("[Turing](https://en.wikipedia.org/wiki/Turing_(machine))")).toBe(
+      "https://en.wikipedia.org/wiki/Turing_(machine)"
+    );
+  });
+
+  test("parentheses in a destination do not swallow the attribute block", () => {
+    // The early stop cost more than the href: having committed to ending at the
+    // inner `)`, the pattern could no longer see `{…}`, so the attributes went too.
+    const doc = markdownToProseMirror("[x](https://e.com/a_(b)){target=_blank}");
+    const mark = doc.content[0].content[0].marks[0];
+    expect(mark.attrs.href).toBe("https://e.com/a_(b)");
+    expect(mark.attrs.target).toBe("_blank");
+  });
+
+  test("an image src keeps balanced parentheses", () => {
+    const doc = markdownToProseMirror("![alt](/photos/a_(b).png)");
+    const img = doc.content[0].content?.[0] ?? doc.content[0];
+    expect(img.attrs.src).toBe("/photos/a_(b).png");
+  });
+
+  test("deeper nesting degrades to marked's tokenizer: href correct, attrs dropped", () => {
+    // Pinned as a KNOWN degradation, not an aspiration. Our pattern handles one
+    // nesting level; deeper falls through to marked's own link tokenizer, which is
+    // full CommonMark on the href but knows nothing about `{attrs}`. Recording it
+    // means a future change to either half is visible rather than silent.
+    const doc = markdownToProseMirror("[y](https://e.com/a_(b_(c))){target=_blank}");
+    const mark = doc.content[0].content[0].marks[0];
+    expect(mark.attrs.href).toBe("https://e.com/a_(b_(c))");
+    expect(mark.attrs.target).toBeUndefined();
+  });
 });
 
 describe("Extended Syntax", () => {
@@ -366,26 +415,6 @@ describe("Extended Syntax", () => {
       ],
     });
   });
-
-  //   test("parses eyebrow headings", () => {
-  //     const markdown = "### Eyebrow\n# Main Title";
-  //     const result = markdownToProseMirror(markdown);
-
-  //     expect(result).toEqual({
-  //       type: "doc",
-  //       content: [
-  //         {
-  //           type: "eyebrowHeading",
-  //           content: [{ type: "text", text: "Eyebrow" }],
-  //         },
-  //         {
-  //           type: "heading",
-  //           attrs: { level: 1, id: null },
-  //           content: [{ type: "text", text: "Main Title" }],
-  //         },
-  //       ],
-  //     });
-  //   });
 
   test("parses dividers", () => {
     const markdown = "Text\n\n---\n\nMore text";

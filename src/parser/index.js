@@ -3,7 +3,6 @@
  */
 
 import { parseBlock } from "./block.js";
-import { isEyebrowPattern, parseEyebrowPattern } from "./patterns.js";
 import { isEmptyContent } from "./utils.js";
 
 /**
@@ -14,21 +13,7 @@ import { isEmptyContent } from "./utils.js";
  */
 function parseMarkdownContent(tokens, schema) {
     const content = [];
-    let skipNext = false;
-    // console.log("tokens:", tokens);
     for (let i = 0; i < tokens.length; i++) {
-        if (skipNext) {
-            skipNext = false;
-            continue;
-        }
-
-        // Handle eyebrow pattern
-        // if (isEyebrowPattern(tokens, i)) {
-        //   content.push(...parseEyebrowPattern(tokens, i, schema));
-        //   skipNext = true;
-        //   continue;
-        // }
-
         const node = parseBlock(tokens[i], schema);
         if (node) {
             if (Array.isArray(node)) {
