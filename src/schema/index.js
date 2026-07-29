@@ -126,8 +126,26 @@ const baseNodes = {
         group: "block",
     },
 
+    // `type` is the LIVE axis: kit's Divider renderer reads it and switches on
+    // `hr` (default) vs `dots` (`kit/styled/Section/renderers/Divider.jsx`, via
+    // `Render.jsx` → `<Divider type={attrs?.type} />`). It was consumed but never
+    // declared — the mirror of the `dataBlock` defect, which was emitted but never
+    // declared, and it hid for the same reason: nothing compares a renderer's
+    // reads against this inventory.
+    //
+    // `style` and `size` are DEAD and kept only pending a removal pass. Measured
+    // 2026-07-29: nothing in kit, runtime or core reads either; the semantic
+    // parser drops both (`sequence.js` emits a bare `{ type: "divider" }`);
+    // content-writer serializes every divider to `---` regardless; and no markdown
+    // spelling can set them — `---`, `***` and `___` all yield the defaults. They
+    // are `eyebrowHeading`-shaped: declared vocabulary nothing can reach.
+    //
+    // Note the consequence while they coexist: a markdown author cannot write a
+    // dots divider at all, because no spelling sets `type`. That is a real
+    // expressive gap, not just an alignment detail.
     divider: {
         attrs: {
+            type: { default: null },
             style: { default: "line" },
             size: { default: "normal" },
         },
