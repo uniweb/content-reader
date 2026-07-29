@@ -904,3 +904,42 @@ describe("Line breaks", () => {
     ]);
   });
 });
+
+describe('divider attribute spelling', () => {
+  // `divider.type` is the live axis (kit renders `hr` vs `dots`) but no markdown
+  // spelling could set it, so a file author could not write a dots divider at
+  // all — and the visual editor DEFAULTS to dots, making that most editor
+  // dividers rather than a rare one.
+  it('accepts an attribute block on any thematic-break spelling', () => {
+    for (const src of ['---{type=dots}', '***{type=dots}', '___{type=dots}', '--- {type=dots}']) {
+      const doc = markdownToProseMirror(`x\n\n${src}\n\ny\n`)
+      const div = doc.content.find((n) => n.type === 'divider')
+      expect(div, src).toBeTruthy()
+      expect(div.attrs.type, src).toBe('dots')
+    }
+  })
+
+  it('leaves a plain thematic break exactly as it was', () => {
+    // The tokenizer matches ONLY when an attribute block follows, so every
+    // existing divider keeps taking marked's own path. This is what makes the
+    // change additive rather than a re-interpretation of stored content.
+    for (const src of ['---', '***', '___']) {
+      const div = markdownToProseMirror(`x\n\n${src}\n\ny\n`).content.find(
+        (n) => n.type === 'divider'
+      )
+      expect(div, src).toBeTruthy()
+      expect(div.attrs.type, src).toBeUndefined()
+    }
+  })
+
+  it('does NOT overload the bare spellings to mean different things', () => {
+    // Reading `***` as "dots" would have needed no tokenizer at all — the raw
+    // token is right there — and it is the wrong trade. CommonMark defines the
+    // three as identical and authors pick between them as a house style, so a
+    // document's rendering would start depending on a choice writers consider
+    // free. Pinned so the cheap version cannot be reintroduced as a tidy-up.
+    const a = markdownToProseMirror('x\n\n---\n\ny\n').content.find((n) => n.type === 'divider')
+    const b = markdownToProseMirror('x\n\n***\n\ny\n').content.find((n) => n.type === 'divider')
+    expect(a.attrs).toEqual(b.attrs)
+  })
+})

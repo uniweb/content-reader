@@ -289,6 +289,16 @@ function parseBlock(token, schema) {
         };
     }
 
+    // Same node, but authored with an attribute block (`---{type=dots}`). The
+    // attrs ride on top of the defaults rather than replacing them, so a spelling
+    // that sets only `type` still carries the legacy pair the schema declares.
+    if (token.type === "dividerBlock") {
+        return {
+            type: "divider",
+            attrs: { style: "line", size: "normal", ...(token.attrs || {}) },
+        };
+    }
+
     // Custom math block token from the block-level marked extension
     // ($$...$$ on its own line, optionally followed by {#id …attrs}).
     if (token.type === "mathBlock") {

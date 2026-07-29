@@ -8,6 +8,7 @@
 
 import { parseAttributeString } from './attributes.js'
 import { getMathExtensions } from './math.js'
+import { createDividerExtension } from './divider.js'
 
 /**
  * Regex patterns for matching markdown elements with optional attributes
@@ -316,6 +317,7 @@ export function getMarkedExtensions() {
       createCiteExtension(),
       createRefExtension(),
       createSpanExtension(),
+      createDividerExtension(),
       ...getMathExtensions(),
     ],
   }
