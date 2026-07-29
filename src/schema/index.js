@@ -126,28 +126,21 @@ const baseNodes = {
         group: "block",
     },
 
-    // `type` is the LIVE axis: kit's Divider renderer reads it and switches on
-    // `hr` (default) vs `dots` (`kit/styled/Section/renderers/Divider.jsx`, via
-    // `Render.jsx` → `<Divider type={attrs?.type} />`). It was consumed but never
-    // declared — the mirror of the `dataBlock` defect, which was emitted but never
-    // declared, and it hid for the same reason: nothing compares a renderer's
-    // reads against this inventory.
+    // The one attribute a divider has, and the one kit renders: `hr` (default)
+    // vs `dots` (`kit/styled/Section/renderers/Divider.jsx`). Authored as
+    // `---{type=dots}`; a bare `---` leaves it unset and renders as a rule.
     //
-    // `style` and `size` are DEAD and kept only pending a removal pass. Measured
-    // 2026-07-29: nothing in kit, runtime or core reads either; the semantic
-    // parser drops both (`sequence.js` emits a bare `{ type: "divider" }`);
-    // content-writer serializes every divider to `---` regardless; and no markdown
-    // spelling can set them — `---`, `***` and `___` all yield the defaults. They
-    // are `eyebrowHeading`-shaped: declared vocabulary nothing can reach.
-    //
-    // Note the consequence while they coexist: a markdown author cannot write a
-    // dots divider at all, because no spelling sets `type`. That is a real
-    // expressive gap, not just an alignment detail.
+    // `style` and `size` were removed 2026-07-29 — declared vocabulary nothing
+    // could reach. Nothing in kit, runtime or core read either, the semantic
+    // parser dropped both, content-writer serialized every divider to `---`
+    // regardless, and no markdown spelling could set them. Same shape as
+    // `eyebrowHeading`: freezing them in would have told a consumer to support
+    // values that never arrive. Verified before removing that nothing compiles
+    // this spec into a strict Schema, so no stored document fails to load for
+    // carrying them — they are simply ignored now, as they always were.
     divider: {
         attrs: {
             type: { default: null },
-            style: { default: "line" },
-            size: { default: "normal" },
         },
         group: "block",
     },

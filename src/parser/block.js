@@ -285,7 +285,6 @@ function parseBlock(token, schema) {
     if (token.type === "hr") {
         return {
             type: "divider",
-            attrs: { style: "line", size: "normal" },
         };
     }
 
@@ -295,7 +294,7 @@ function parseBlock(token, schema) {
     if (token.type === "dividerBlock") {
         return {
             type: "divider",
-            attrs: { style: "line", size: "normal", ...(token.attrs || {}) },
+            attrs: { ...(token.attrs || {}) },
         };
     }
 

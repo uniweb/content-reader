@@ -428,8 +428,9 @@ describe("Extended Syntax", () => {
           content: [{ type: "text", text: "Text" }],
         },
         {
+          // No attrs: `style`/`size` were retired 2026-07-29 as unreachable
+          // vocabulary, and a bare `---` sets no `type`.
           type: "divider",
-          attrs: { style: "line", size: "normal" },
         },
         {
           type: "paragraph",
@@ -928,7 +929,9 @@ describe('divider attribute spelling', () => {
         (n) => n.type === 'divider'
       )
       expect(div, src).toBeTruthy()
-      expect(div.attrs.type, src).toBeUndefined()
+      // No attrs object at all now — the only attr a divider has is `type`, and
+      // a bare break does not set it.
+      expect(div.attrs?.type, src).toBeUndefined()
     }
   })
 
