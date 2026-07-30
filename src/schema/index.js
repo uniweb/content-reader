@@ -158,6 +158,39 @@ const baseNodes = {
         group: "block",
     },
 
+    // A TAGGED PROSE fence — ```md:faq — whose body is markdown, parsed here
+    // into real block content exactly like an `inset_block`'s.
+    //
+    // The `tag` is a DISCRIMINATOR, not a component name and not a gate: it says
+    // *which concept this is* so an editor can offer a specialized surface for
+    // it, while rendering stays a foundation decision. Nothing in this package —
+    // or in semantic-parser, content-writer, runtime, core or kit — branches on
+    // its value; a framework-side registry of concept names is the failure this
+    // shape exists to avoid. The set of concepts lives in the editor, which owns
+    // it legitimately.
+    //
+    // Distinct from `dataBlock` (```yaml:nav), which carries field-shaped data
+    // parsed to a value and passed through opaquely. This one carries PROSE, and
+    // the note on `dataBlock` below — "rich prose belongs in content rather than
+    // in here" — is why it is a node with `content` rather than an attribute.
+    //
+    // Its derived shape is fixed by the FENCE, unconditionally: a concept block
+    // is always an item array (`parseContent(doc, { alwaysItems: true })`), so no
+    // schema is consulted to decide it and the tag stays opaque. A body with no
+    // headings is the degenerate single-item case — one titleless item carrying
+    // the prose — which is what a callout (```md:warning) is.
+    //
+    // Ships together with content-writer's serializer and the editor's TipTap
+    // registration: an undeclared node type fails a strict consumer's WHOLE
+    // document, so none of the three can land alone.
+    concept_block: {
+        attrs: {
+            tag: {},
+        },
+        content: "block+",
+        group: "block",
+    },
+
     // The one attribute a divider has, and the one kit renders: `hr` (default)
     // vs `dots` (`kit/styled/Section/renderers/Divider.jsx`). Authored as
     // `---{type=dots}`; a bare `---` leaves it unset and renders as a rule.
