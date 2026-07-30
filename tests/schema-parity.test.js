@@ -95,6 +95,9 @@ const CORPUS = {
   insetRefVisual: '![desc](@Gallery){cols=3}\n',
   insetRefText: 'See [the note](@Cite){key=smith2020}.\n',
   insetBlock: '```@Alert{type=warning}\nBody with **marks** and [links](/x).\n```\n',
+  // A tagged PROSE fence. Its body is parsed as blocks, so this entry also has
+  // to reach the node types that can only appear INSIDE one.
+  conceptBlock: '```md:faq\n# A question\nAn answer with **marks**.\n\n# Another\nWith a [link](/x).\n```\n',
   mathInline: 'Euler $e^{i\\pi}+1=0$ here.\n',
   mathDisplay: '$$\n\\int_0^1 x\\,dx\n$$\n',
   mathFence: '```math\nE = mc^2\n```\n',

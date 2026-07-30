@@ -363,6 +363,39 @@ function parseBlock(token, schema) {
             };
         }
 
+        // A `md:`-tagged fence is a CONCEPT BLOCK: authored prose under a
+        // concept name.
+        //
+        //     ```md:faq
+        //     # What plans do you have?
+        //     We have three.
+        //     ```
+        //
+        // The body is markdown, so it is parsed here — once, at read time, by
+        // the same recursion the container branch above uses. Nothing
+        // downstream re-parses a string as markdown; what gets stored is
+        // ProseMirror, like every other node.
+        //
+        // The `tag` is a DISCRIMINATOR — it says *which concept this is*, so a
+        // tool can offer a surface suited to it — and it is deliberately opaque:
+        // no branch here or anywhere downstream reads its value, and no schema
+        // is consulted to decide the shape. A concept block always derives to an
+        // item array, fixed by the fence. That is what keeps the set of concepts
+        // out of the framework, where it does not belong; a component name in
+        // content would be a rendering instruction, which is a different job.
+        //
+        // Ordered BEFORE the `if (tag)` branch below, which would otherwise send
+        // this to `parseCodeBlockData` — a function that answers with parsed
+        // DATA and returns null for anything that is not JSON or YAML. Prose is
+        // not data, so it does not belong there; leave that function alone.
+        if (language === "md" && tag) {
+            return {
+                type: "concept_block",
+                attrs: { tag },
+                content: parseBlocks(marked.lexer(rawText), schema),
+            };
+        }
+
         // Tagged blocks become dataBlocks (structured data, not code for display)
         if (tag) {
             const parsedData = parseCodeBlockData(rawText, language);

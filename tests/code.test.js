@@ -177,3 +177,78 @@ describe("Container fences — the block form of an inset", () => {
         expect(markdownToProseMirror("```@9bad\nbody\n```").content[0].type).toBe("codeBlock");
     });
 });
+
+describe("Concept blocks — ```md:<tag>", () => {
+    test("a md: fence becomes a concept_block whose body is parsed as blocks", () => {
+        const result = markdownToProseMirror(
+            "```md:faq\n# A question\nAn answer.\n\n# Another\nAlso answered.\n```"
+        );
+
+        expect(result.content).toHaveLength(1);
+        const node = result.content[0];
+        expect(node.type).toBe("concept_block");
+        expect(node.attrs).toEqual({ tag: "faq" });
+        expect(node.content.map(n => n.type)).toEqual([
+            "heading", "paragraph", "heading", "paragraph",
+        ]);
+    });
+
+    test("the body keeps its marks and links — it is content, not a string", () => {
+        // The whole point of parsing at read time: nothing downstream has to
+        // re-parse a string as markdown to find out there was a link in it.
+        const node = markdownToProseMirror(
+            "```md:faq\n# Q\nAn answer with **bold** and a [link](/x).\n```"
+        ).content[0];
+
+        const para = node.content.find(n => n.type === "paragraph");
+        const marks = para.content.flatMap(c => (c.marks || []).map(m => m.type));
+        expect(marks).toEqual(expect.arrayContaining(["bold", "link"]));
+    });
+
+    test("block content nests — lists, quotes and code samples all survive", () => {
+        const node = markdownToProseMirror(
+            "````md:faq\n# Q\n- one\n- two\n\n> quoted\n\n```js\nconst x = 1\n```\n````"
+        ).content[0];
+
+        expect(node.type).toBe("concept_block");
+        expect(node.content.map(n => n.type)).toEqual([
+            "heading", "bulletList", "blockquote", "codeBlock",
+        ]);
+    });
+
+    test("a headingless body is still a concept block — that is a callout", () => {
+        // ```md:warning is the same node with no headings in it. The shape is
+        // fixed by the fence, so there is no second parse mode to select.
+        const node = markdownToProseMirror(
+            "```md:warning\nBack up your database **first**.\n\n- Not reversible\n```"
+        ).content[0];
+
+        expect(node.type).toBe("concept_block");
+        expect(node.attrs.tag).toBe("warning");
+        expect(node.content.map(n => n.type)).toEqual(["paragraph", "bulletList"]);
+    });
+
+    test("the tag is opaque — any name works, none is special", () => {
+        // If this ever needs updating because a tag started behaving
+        // differently, a concept registry has grown in the framework.
+        for (const tag of ["faq", "warning", "steps", "glossary", "not-a-real-concept"]) {
+            const node = markdownToProseMirror(`\`\`\`md:${tag}\n# T\nB\n\`\`\``).content[0];
+            expect(node.type).toBe("concept_block");
+            expect(node.attrs.tag).toBe(tag);
+        }
+    });
+
+    test("an untagged md fence stays a code block — the tag is what makes it one", () => {
+        const node = markdownToProseMirror("```md\n# Just a sample\n```").content[0];
+        expect(node.type).toBe("codeBlock");
+        expect(node.attrs.language).toBe("md");
+    });
+
+    test("neighbouring fences are untouched — the branch is purely additive", () => {
+        expect(markdownToProseMirror("```yaml:nav\n- a: 1\n```").content[0].type).toBe("dataBlock");
+        expect(markdownToProseMirror("```json:Form\n{}\n```").content[0].type).toBe("dataBlock");
+        expect(markdownToProseMirror("```@Alert\nbody\n```").content[0].type).toBe("inset_block");
+        expect(markdownToProseMirror("```math\nE=mc^2\n```").content[0].type).toBe("math_display");
+        expect(markdownToProseMirror("```js\nconst x = 1\n```").content[0].type).toBe("codeBlock");
+    });
+});
