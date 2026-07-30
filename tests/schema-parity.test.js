@@ -59,6 +59,15 @@ const CORPUS = {
   // produced one. Both spellings, since the reader dispatches on the tag.
   dataBlockYaml: '```yaml:Card\ntitle: Hello\n```\n',
   dataBlockJson: '```json:Form\n{ "fields": [] }\n```\n',
+  // The FALLBACK a tagged fence degrades to when its body does not parse into
+  // data — a `codeBlock` that still carries the author's `tag`. Both entries
+  // above exit through `dataBlock` instead, so neither reaches this branch, and
+  // `codeBlock.tag` sat emitted-but-undeclared behind that gap until 2026-07-30:
+  // the corpus bound in this file's header, fired a FOURTH time, and the first
+  // where the missing coverage was a construct's failure path rather than the
+  // construct itself. Covering a syntax does not cover what it falls back to.
+  codeBlockTaggedUnknownLang: '```toml:Config\nkey = 1\n```\n',
+  codeBlockTaggedMalformed: '```json:Broken\n{not json\n```\n',
   blockquote: '> quoted **text**\n',
   divider: 'before\n\n---\n\nafter\n',
   image: '![alt](/img.png){width=100}\n',

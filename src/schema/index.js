@@ -266,9 +266,26 @@ const baseNodes = {
         atom: true,
     },
 
+    // Source to DISPLAY, with syntax highlighting — as opposed to `dataBlock`
+    // above, which is data to consume.
+    //
+    // `tag` is here because a TAGGED fence lands on this node whenever its body
+    // does not parse into data: a language the reader has no parser for
+    // (```toml:Config), or a malformed ```yaml:/```json: body. `parser/block.js`
+    // emits `{ language, tag }` on that path and `content-writer`'s
+    // `serializeCodeBlock` reads it back to re-emit `lang:tag`, so dropping it
+    // rewrites the author's ```yaml:nav as a bare ```yaml on the next save.
+    //
+    // Declared 2026-07-30 — the FOURTH emitted-but-undeclared instance, and the
+    // first the parity corpus could not have caught: its two tagged entries
+    // (`dataBlockYaml`, `dataBlockJson`) both parse SUCCESSFULLY, so they exit
+    // through `dataBlock` and no entry reached the only branch that emits this.
+    // A corpus that covers a construct does not necessarily cover the FALLBACK
+    // that construct degrades to. `codeBlockTagged*` below close it.
     codeBlock: {
         attrs: {
             language: { default: null },
+            tag: { default: null },
             filename: { default: null },
         },
         content: "text*",
