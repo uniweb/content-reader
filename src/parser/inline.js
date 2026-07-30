@@ -398,6 +398,8 @@ function parseInline(token, schema, removeNewLine = false) {
             fit,          // object-fit: cover, contain, etc.
             position,     // object-position
             color,        // Icon color
+            href,         // Clickable media — wraps the rendered media in a link
+            target,       // …and its link target
             ...otherAttrs
         } = token.attrs || {};
 
@@ -439,6 +441,9 @@ function parseInline(token, schema, removeNewLine = false) {
                     // Styling attributes
                     ...(fit && { fit }),
                     ...(position && { position }),
+                    // Clickable media
+                    ...(href && { href }),
+                    ...(target && { target }),
                     // EXACTLY these two, not "any other custom attribute" — the
                     // image node is a CLOSED content model, so `{data-x=1}` is
                     // tokenized and then dropped here. Neither of these is a

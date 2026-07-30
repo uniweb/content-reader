@@ -55,6 +55,28 @@ const baseNodes = {
             // Inlining the resolved SVG in their place freezes it.
             library: { default: null },
             name: { default: null },
+            // Icon presentation — `{size=20}` and `{color=red}`, the two
+            // optional attrs the authoring guide documents beside the icon
+            // syntax (cli/partials/agents.md, which ships as AGENTS.md in every
+            // project). `size` is the icon's shorthand for width=height.
+            //
+            // Declared 2026-07-30 after the frontend found them EMITTED but
+            // UNDECLARED — the third time the parity corpus's bound has fired,
+            // and the first where the undeclared attr was already a PUBLISHED
+            // authoring spelling. See tests/schema-parity.test.js, which now
+            // derives a corpus from the docs so a documented attr cannot go
+            // undeclared again.
+            //
+            // `preserveColors` is deliberately NOT here. It is a kit <Icon>
+            // prop and an editor attr with no authoring spelling, by the
+            // boundary recorded in kb/framework/content/icon-reference-vs-inset.md:
+            // this node is a REFERENCE that a consumer resolves, and control
+            // over the resolved markup belongs to the component layer. A
+            // themable custom graphic is an inset (SVG+JSX reading semantic
+            // tokens — see templates/marketing .../insets/Diagram), which is
+            // strictly more capable than any attribute here could be.
+            size: { default: null },
+            color: { default: null },
             // Dimension attributes
             width: { default: null },
             height: { default: null },
@@ -85,6 +107,16 @@ const baseNodes = {
             // Styling attributes
             fit: { default: null },     // object-fit: cover, contain, fill, etc.
             position: { default: null }, // object-position
+            // Clickable media — `![Shot](./s.jpg){href=/products target=_blank}`.
+            // Documented in docs/reference/content-structure.md ("Clickable
+            // Images and Videos"), down to the shape it yields, and read by
+            // semantic-parser's parseImgBlock, which has always destructured
+            // and returned both. Only the EMISSION was missing, so the
+            // documented attribute was tokenized and dropped here — the
+            // receiving half built, the sending half never wired. Found
+            // 2026-07-30 while honoring the video role, same defect class.
+            href: { default: null },
+            target: { default: null },
             // Generic attributes
             class: { default: null },
             id: { default: null },

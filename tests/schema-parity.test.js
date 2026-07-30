@@ -29,6 +29,7 @@
  * always the declaration — not an exclusion here.
  */
 
+import { readFileSync } from 'node:fs'
 import { markdownToProseMirror } from '../src/index.js'
 import { getBaseSchema } from '../src/schema/index.js'
 
@@ -62,6 +63,26 @@ const CORPUS = {
   divider: 'before\n\n---\n\nafter\n',
   image: '![alt](/img.png){width=100}\n',
   icon: '![](lu-house)\n',
+  // The icon's two DOCUMENTED optional attrs (cli/partials/agents.md, which
+  // ships as AGENTS.md in every project). Both were emitted-but-undeclared
+  // until 2026-07-30 because `CORPUS.icon` above is the bare form — the corpus
+  // bound in this file's header, fired a third time. An entry naming a
+  // construct does not cover that construct's ATTRIBUTES.
+  iconWithSizeAndColor: '![](lu-house){size=32 color=accent}\n',
+  // A file-sourced icon, both documented spellings (agents.md, and
+  // docs/reference/content-structure.md "Setting the Role"). These carry a
+  // `src` and no library/name.
+  iconFromFilePrefix: '![Logo](icon:./logo.svg)\n',
+  iconFromFileRoleAttr: '![Logo](./logo.svg){role=icon}\n',
+  // Every attribute in the published "Video Attributes" table.
+  video: '![Demo](./demo.mp4){role=video autoplay muted loop controls poster=./thumb.jpg}\n',
+  // The document role and the two attrs it contributed.
+  pdf: '![Report](./report.pdf){role=pdf preview=./cover.jpg author=Ada description=Annual}\n',
+  // A role that is neither icon nor video — rides through verbatim.
+  bannerRole: '![Hero](./hero.jpg){role=banner fit=cover position=center}\n',
+  // Clickable media, both documented shapes.
+  clickableImage: '![Shot](./s.jpg){href=/products/details}\n',
+  clickableVideo: '![Demo](./demo.mp4){role=video href=/demo target=_blank}\n',
   insetRefVisual: '![desc](@Gallery){cols=3}\n',
   insetRefText: 'See [the note](@Cite){key=smith2020}.\n',
   insetBlock: '```@Alert{type=warning}\nBody with **marks** and [links](/x).\n```\n',
@@ -179,6 +200,63 @@ describe('schema parity: every emitted type is declared', () => {
     }
     expect([...new Set(undeclared)]).toEqual([])
   })
+
+  // ── The corpus bound, closed ────────────────────────────────────────────
+  //
+  // Every test above this line is bounded by CORPUS: coverage is
+  // `emitted-by-CORPUS ⊆ declared`, so an attribute no entry happens to write
+  // is invisible. That bound has now produced three escapes (`span`;
+  // `hardBreak`/`dataBlock`; `size`/`color`), each found by a consumer rather
+  // than here — and the third had been a documented authoring spelling for
+  // months. A guard that needs its author to imagine the missing case is the
+  // same guard that missed it.
+  //
+  // So this one does not read the corpus. It reads the EMISSION SITE: the
+  // attribute names `parseInline` destructures out of `token.attrs` are, by
+  // construction, exactly the vocabulary the parser can put on an image node.
+  // Adding one without declaring it now fails here whether or not anyone
+  // thinks to write markdown that exercises it.
+  //
+  // Source-text extraction is deliberate. Importing cannot see a destructuring
+  // pattern, and every alternative that could (a shared ATTRS constant the
+  // parser and schema both consume) makes the two agree by definition — which
+  // is not a check, it is a rename. The test's job is to compare two
+  // independently-written statements of the same set.
+  test('every attribute the PARSER destructures is declared on the image node', () => {
+    const inlineSrc = readFileSync(new URL('../src/parser/inline.js', import.meta.url), 'utf8')
+
+    // `parseInline` destructures `token.attrs` for several node types. The one
+    // that matters is the LAST such block before the image node is built —
+    // anchoring on the emission rather than on a name keeps this pointed at the
+    // right code if the variables are renamed.
+    const emitAt = inlineSrc.lastIndexOf('type: "image"')
+    const blocks = [...inlineSrc.slice(0, emitAt).matchAll(/const\s*\{([\s\S]*?)\}\s*=\s*token\.attrs/g)]
+    // Guard the guard: if the destructuring is refactored out of recognition,
+    // fail loudly here rather than passing on an empty set.
+    expect(emitAt).toBeGreaterThan(0)
+    expect(blocks.length).toBeGreaterThan(0)
+
+    const destructured = blocks[blocks.length - 1][1]
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/\/\/[^\n]*/g, '')
+      .split(',')
+      .map((s) => s.trim().split(':')[0].trim())
+      .filter((s) => s && !s.startsWith('...'))
+
+    expect(destructured.length).toBeGreaterThan(15)
+
+    const declared = new Set(Object.keys(schema.nodes.image.attrs))
+    expect(destructured.filter((a) => !declared.has(a))).toEqual([])
+  })
+
+  // The direct half of the same set: attrs written into the node without going
+  // through that destructuring (from the href, the title slot, or `otherAttrs`).
+  test.each(['src', 'caption', 'alt', 'role', 'library', 'name', 'class', 'id'])(
+    'image.%s — emitted directly by the parser — stays declared',
+    (attr) => {
+      expect(Object.keys(schema.nodes.image.attrs)).toContain(attr)
+    }
+  )
 
   test('an icon keeps its reference — library + name, not a resolved glyph', () => {
     // `![](lu-house)` is a REFERENCE. A consumer that drops these two attrs
