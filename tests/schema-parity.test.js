@@ -98,6 +98,10 @@ const CORPUS = {
   // A tagged PROSE fence. Its body is parsed as blocks, so this entry also has
   // to reach the node types that can only appear INSIDE one.
   conceptBlock: '```md:faq\n# A question\nAn answer with **marks**.\n\n# Another\nWith a [link](/x).\n```\n',
+  // The same node in GitHub's spelling. Covered because the ATTRS differ —
+  // `syntax` only appears on this path, and an attr no corpus entry writes
+  // is exactly what this file's header calls the corpus bound.
+  githubAlert: '> [!WARNING]\n> Back up **first**.\n',
   mathInline: 'Euler $e^{i\\pi}+1=0$ here.\n',
   mathDisplay: '$$\n\\int_0^1 x\\,dx\n$$\n',
   mathFence: '```math\nE = mc^2\n```\n',

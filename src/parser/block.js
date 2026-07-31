@@ -67,6 +67,54 @@ function extractTrailingHeadingAttrs(content) {
 }
 
 /**
+ * GitHub's five alert kinds. A CLOSED set with a published definition, which is
+ * what makes reading them here a convention rather than a concept registry —
+ * nothing else in the framework learns these names, and an unrecognized marker
+ * stays an ordinary blockquote rather than becoming a concept block with a
+ * junk tag.
+ */
+const ALERT_KINDS = new Set([
+    "NOTE",
+    "TIP",
+    "IMPORTANT",
+    "WARNING",
+    "CAUTION",
+]);
+
+/**
+ * Read a `[!KIND]` marker off the front of a parsed blockquote body.
+ *
+ * The marker owns its whole line, so it is the first paragraph's first text
+ * node — and that paragraph is dropped when the marker is all it held, which
+ * is the normal shape. A marker with trailing text on the same line keeps the
+ * remainder as prose rather than discarding it.
+ *
+ * @param {Array} content - the blockquote's parsed block content
+ * @returns {{ tag: string, content: Array }|null} null when this is an
+ *   ordinary blockquote, which includes an unknown marker
+ */
+function readAlertMarker(content) {
+    const [first, ...rest] = content || [];
+    if (first?.type !== "paragraph") return null;
+
+    const [lead, ...inline] = first.content || [];
+    if (lead?.type !== "text" || typeof lead.text !== "string") return null;
+
+    const match = /^\[!([A-Za-z]+)\]\s*/.exec(lead.text);
+    if (!match || !ALERT_KINDS.has(match[1].toUpperCase())) return null;
+
+    const remainder = lead.text.slice(match[0].length);
+    const head = remainder
+        ? [{ ...lead, text: remainder }, ...inline]
+        : inline;
+
+    return {
+        tag: match[1].toLowerCase(),
+        content: head.length ? [{ ...first, content: head }, ...rest] : rest,
+    };
+}
+
+/**
  * Process code block info string (e.g., "json:tag-name")
  * @param {string} info - Code block info string
  * @returns {Object} Language and optional tag
@@ -276,10 +324,31 @@ function parseBlock(token, schema) {
     }
 
     if (token.type === "blockquote") {
-        return {
-            type: "blockquote",
-            content: parseBlocks(token.tokens, schema),
-        };
+        const content = parseBlocks(token.tokens, schema);
+
+        // A GitHub alert is a CONCEPT BLOCK in a second spelling:
+        //
+        //     > [!WARNING]
+        //     > Back up your database first.
+        //
+        // Same node as ```md:warning — same tag, same derived items, same
+        // round trip. Authors arrive already knowing this syntax, and
+        // supporting it costs one branch rather than a second mechanism.
+        //
+        // `syntax` records which spelling was written so the serializer can
+        // write it back. Without it an author's `> [!WARNING]` returns as a
+        // fence on the next editor sync — the same defect `dataBlock.language`
+        // was added to fix, where a ```yaml block silently became ```json.
+        const alert = readAlertMarker(content);
+        if (alert) {
+            return {
+                type: "concept_block",
+                attrs: { tag: alert.tag, syntax: "gfm" },
+                content: alert.content,
+            };
+        }
+
+        return { type: "blockquote", content };
     }
 
     if (token.type === "hr") {

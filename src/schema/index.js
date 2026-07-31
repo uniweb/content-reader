@@ -186,6 +186,13 @@ const baseNodes = {
     concept_block: {
         attrs: {
             tag: {},
+            // Which spelling the author wrote: a ```md:<tag> fence (default,
+            // null) or GitHub's `> [!WARNING]` alert (`gfm`). One node, two
+            // surfaces — recorded so the serializer writes back what was
+            // written. Without it a `> [!WARNING]` returns as a fence on the
+            // next editor sync, which is the defect `dataBlock.language` was
+            // added to fix for ```yaml silently becoming ```json.
+            syntax: { default: null },
         },
         content: "block+",
         group: "block",
