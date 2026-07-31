@@ -4,7 +4,14 @@
  * Runs at markdown parse time, never at render time. The returned string
  * is stored on a ProseMirror math node's `mathml` attribute and rides
  * through the content pipeline unchanged. Browsers render MathML
- * natively — no runtime library, no CSS dependency, no CDN.
+ * natively — no runtime library and no CDN.
+ *
+ * It does NOT render correctly without CSS, and this comment used to claim
+ * otherwise. Temml emits `tml-*` class hooks that carry an `aligned`
+ * environment's column alignment and row spacing, and a browser gives `mtd`
+ * no vertical padding of its own, so a `pmatrix` renders with its rows
+ * touching. The declarations that fix both, and the three lanes that each
+ * need their own copy, are in `@uniweb/press`'s `adapters/math-css.js`.
  *
  * Keeping Temml confined to this module is load-bearing: content-reader
  * is a build-time package and must never be imported into a site's
