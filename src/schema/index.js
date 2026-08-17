@@ -47,6 +47,25 @@ const baseNodes = {
             caption: { default: null },
             alt: { default: null },
             role: { default: "image" }, // image, icon, hero, video, pdf, etc.
+            // Store-held asset reference — the pair a host resolves through its
+            // declared URL template, in place of a baked `src`. Like the icon
+            // pair below, this is a REFERENCE a consumer resolves at render, and
+            // that is the whole point: a URL freezes one host's route layout into
+            // content that outlives it, while an id is re-resolved every time.
+            //
+            // `assetExt` is separate rather than derived because the id carries
+            // no extension — it is an opaque store key — and every lane that
+            // would have to re-derive one would be parsing a string it was handed.
+            //
+            // ⚠️ Declared here 2026-08-17, in the same change that started
+            // emitting them. The comment below records three prior rounds of
+            // "EMITTED but UNDECLARED", each found by a consumer rather than by
+            // this package — this pair would have been the fourth. An attr
+            // missing here is not a rendering bug (the parser reads whatever
+            // arrives on the node); it is dropped by anything that VALIDATES
+            // against this schema, which is the silent half.
+            assetId: { default: null },
+            assetExt: { default: null },
             // Icon reference — `![](lu-house)` yields role:"icon" with a null
             // `src` and the glyph named instead: `library` is the family prefix
             // ("lu", "hi", "hi2", …) and `name` the icon within it. The pair is
