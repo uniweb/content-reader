@@ -66,6 +66,22 @@ const baseNodes = {
             // against this schema, which is the silent half.
             assetId: { default: null },
             assetExt: { default: null },
+            // ⭐ A node carries MORE THAN ONE asset reference: `src` above, plus
+            // a video's `poster` and a document's `preview` below. Identity has
+            // to name which one it belongs to, or a producer cannot record a
+            // poster's id without inventing vocabulary — which is exactly what
+            // the app lane hit, and correctly refused to do, on 2026-08-17.
+            //
+            // Flat and declared rather than a nested `assets: {…}` map: a nested
+            // map puts identity inside a value this schema cannot see, which is
+            // the property that makes a reference buried in an opaque field
+            // impossible to enumerate or re-point. The convention is
+            // **unprefixed identifies the PRIMARY reference (`src`); a prefix
+            // names the attr it belongs to.**
+            posterAssetId: { default: null },
+            posterAssetExt: { default: null },
+            previewAssetId: { default: null },
+            previewAssetExt: { default: null },
             // Icon reference — `![](lu-house)` yields role:"icon" with a null
             // `src` and the glyph named instead: `library` is the family prefix
             // ("lu", "hi", "hi2", …) and `name` the icon within it. The pair is
