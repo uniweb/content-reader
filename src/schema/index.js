@@ -48,7 +48,7 @@ const baseNodes = {
             alt: { default: null },
             role: { default: "image" }, // image, icon, hero, video, pdf, etc.
             // Store-held asset reference — the pair a host resolves through its
-            // declared URL template, in place of a baked `src`. Like the icon
+            // declared URL pattern, in place of a baked `src`. Like the icon
             // pair below, this is a REFERENCE a consumer resolves at render, and
             // that is the whole point: a URL freezes one host's route layout into
             // content that outlives it, while an id is re-resolved every time.
