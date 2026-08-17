@@ -104,7 +104,7 @@ const baseNodes = {
             //
             // `preserveColors` is deliberately NOT here. It is a kit <Icon>
             // prop and an editor attr with no authoring spelling, by the
-            // boundary recorded in kb/framework/content/icon-reference-vs-inset.md:
+            // boundary recorded internally:
             // this node is a REFERENCE that a consumer resolves, and control
             // over the resolved markup belongs to the component layer. A
             // themable custom graphic is an inset (SVG+JSX reading semantic

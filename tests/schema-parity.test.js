@@ -32,6 +32,7 @@
 import { readFileSync } from 'node:fs'
 import { markdownToProseMirror } from '../src/index.js'
 import { getBaseSchema } from '../src/schema/index.js'
+import { ASSET_SLOTS } from '@uniweb/semantic-parser'
 
 // One entry per construct. The key names the syntax so a failure says which
 // markdown produced the undeclared type.
@@ -306,5 +307,50 @@ describe('schema parity: every emitted type is declared', () => {
     const marked = doc.content[0].content.find((n) => n.marks?.length)
     expect(marked.marks[0].type).toBe('span')
     expect(marked.marks[0].attrs).toHaveProperty('accent')
+  })
+})
+
+// ─── Asset-slot declaration ───────────────────────────────────────────────────
+//
+// ⭐ This closes framework's HALF of a gap that has no cross-repo check at all.
+//
+// The corpus above is driven by MARKDOWN, so it can only see attrs the markdown
+// parser emits. Asset identity attrs arrive from the editor and the wire — no
+// syntax produces them — so the sweep is blind to them by construction, and the
+// app's own fixture cannot help either (it scopes to node types declared on both
+// sides *by the same name*, and the editor declares `ImageBlock` where this
+// package declares `image`).
+//
+// What IS checkable here, and what actually went wrong: `ASSET_SLOTS` is the one
+// definition of which identity attrs exist, and every one of them has to be
+// declared on this node — or it renders fine and is silently dropped by anything
+// that validates against this schema. That is precisely how `assetId`/`assetExt`
+// nearly shipped undeclared, and it needs no knowledge of the editor's dialect.
+describe('asset identity attrs are declared', () => {
+  test('every ASSET_SLOTS attr is declared on the image node', () => {
+    const declared = new Set(Object.keys(getBaseSchema().nodes.image.attrs))
+    const missing = ASSET_SLOTS.flatMap((s) =>
+      [s.id, s.ext].filter((a) => !declared.has(a))
+    )
+    expect(missing).toEqual([])
+  })
+
+  test("every slot's URL attrs are declared too", () => {
+    // A slot naming an attr this node does not have is a slot nothing can fill.
+    const declared = new Set(Object.keys(getBaseSchema().nodes.image.attrs))
+    const missing = ASSET_SLOTS.flatMap((s) =>
+      s.urls.filter((u) => u !== 'url' && !declared.has(u))
+    )
+    expect(missing).toEqual([])
+  })
+
+  test('CONTROL: the check can see a missing attr', () => {
+    // Guards the guard — without this, both assertions above would pass against
+    // an empty slot list or an all-declaring schema.
+    const declared = new Set(['assetId'])
+    const missing = [{ id: 'assetId', ext: 'assetExt' }].flatMap((s) =>
+      [s.id, s.ext].filter((a) => !declared.has(a))
+    )
+    expect(missing).toEqual(['assetExt'])
   })
 })

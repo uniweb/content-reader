@@ -1,43 +1,44 @@
 {
-    "name": "@uniweb/content-reader",
-    "version": "1.2.2",
-    "description": "Markdown to ProseMirror document structure converter",
-    "type": "module",
-    "main": "src/index.js",
-    "exports": {
-        ".": "./src/index.js",
-        "./math": "./src/math/index.js"
-    },
-    "scripts": {
-        "test": "vitest run",
-        "test:watch": "vitest",
-        "test-report": "vitest run --reporter=json --outputFile=test-results.json"
-    },
-    "keywords": [
-        "markdown",
-        "prosemirror",
-        "tiptap",
-        "parser"
-    ],
-    "author": "Proximify Inc.",
-    "license": "GPL-3.0-or-later",
-    "dependencies": {
-        "js-yaml": "^4.1.0",
-        "marked": "^11.1.0",
-        "temml": "^0.13.2"
-    },
-    "devDependencies": {
-        "vitest": "^4.1.7"
-    },
-    "directories": {
-        "test": "tests"
-    },
-    "repository": {
-        "type": "git",
-        "url": "git+https://github.com/uniweb/content-reader.git"
-    },
-    "bugs": {
-        "url": "https://github.com/uniweb/content-reader/issues"
-    },
-    "homepage": "https://github.com/uniweb/content-reader#readme"
+  "name": "@uniweb/content-reader",
+  "version": "1.2.2",
+  "description": "Markdown to ProseMirror document structure converter",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./math": "./src/math/index.js"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test-report": "vitest run --reporter=json --outputFile=test-results.json"
+  },
+  "keywords": [
+    "markdown",
+    "prosemirror",
+    "tiptap",
+    "parser"
+  ],
+  "author": "Proximify Inc.",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "marked": "^11.1.0",
+    "temml": "^0.13.2"
+  },
+  "devDependencies": {
+    "@uniweb/semantic-parser": "workspace:*",
+    "vitest": "^4.1.7"
+  },
+  "directories": {
+    "test": "tests"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uniweb/content-reader.git"
+  },
+  "bugs": {
+    "url": "https://github.com/uniweb/content-reader/issues"
+  },
+  "homepage": "https://github.com/uniweb/content-reader#readme"
 }
