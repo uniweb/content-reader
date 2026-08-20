@@ -16,6 +16,8 @@ const baseNodes = {
         attrs: {
             level: { default: 1 },
             id: { default: null },
+            // "pretitle" marks a `#>` label line; null is an ordinary heading.
+            role: { default: null },
         },
         content: "inline*",
         group: "block",

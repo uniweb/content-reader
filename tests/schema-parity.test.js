@@ -37,7 +37,7 @@ import { ASSET_SLOTS } from '@uniweb/semantic-parser'
 // One entry per construct. The key names the syntax so a failure says which
 // markdown produced the undeclared type.
 const CORPUS = {
-  headings: '# H1 heading\n\n## H2 heading\n',
+  headings: '# H1 heading\n\n## H2 heading\n\n#> Label line\n',
   paragraph: 'A plain paragraph.\n',
   inlineMarks: 'Text **bold** *ital* `code` ~~strike~~ and [link](/a).\n',
   bracketedSpan: '# Ready to [get started]{accent}?\n',

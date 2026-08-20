@@ -323,6 +323,22 @@ function parseBlock(token, schema) {
         };
     }
 
+    // A `#>` label line — a heading carrying role "pretitle". The hash count
+    // rides in `level` only for byte-faithful round-trips; it has no meaning.
+    if (token.type === "pretitleBlock") {
+        const headingContent = parseParagraph(token, schema);
+        const { content: cleaned, attrs: trailingAttrs } = extractTrailingHeadingAttrs(headingContent);
+        return {
+            type: "heading",
+            attrs: {
+                level: token.level,
+                id: trailingAttrs.id || null,
+                role: "pretitle",
+            },
+            content: cleaned,
+        };
+    }
+
     if (token.type === "blockquote") {
         const content = parseBlocks(token.tokens, schema);
 
