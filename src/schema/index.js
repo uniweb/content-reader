@@ -17,6 +17,12 @@ const baseNodes = {
             level: { default: 1 },
             id: { default: null },
             // "pretitle" marks a `#>` label line; null is an ordinary heading.
+            // Consumers querying headings generically must exclude the role:
+            // subset attr-matchers (tiptap's isActive({level: 2}), any
+            // objectIncludes-style check) count a pretitle as a heading of its
+            // carried level — measured in a tiptap-based integration, where
+            // the H2 control lit for a pretitle until the query was scoped
+            // with role: null.
             role: { default: null },
         },
         content: "inline*",
