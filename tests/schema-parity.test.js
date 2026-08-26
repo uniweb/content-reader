@@ -170,7 +170,7 @@ describe('schema parity: every emitted type is declared', () => {
   // A second list is a second thing to forget: a consumer generating an adapter
   // reads the schema, so if this test's notion of "open" and the schema's ever
   // disagreed, the test would be policing a contract nobody publishes. Found by
-  // the frontend (channel `frontend-framework-5a47`), who read the declared attr
+  // the frontend lane, who read the declared attr
   // list for `inset_block`, saw only `component`, and correctly asked whether the
   // openness was deliberate or an omission — it was deliberate and unstated.
   const OPEN_ATTR_TYPES = new Set([
