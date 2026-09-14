@@ -59,6 +59,30 @@ describe("Code Parsing", () => {
     });
   });
 
+  // An unquoted date in a yaml data block is the text the author wrote — the value a
+  // quoted one has, and the value a site's YAML files keep. js-yaml's default schema made
+  // it a `Date`, whose only JSON form is a timestamp the author never wrote, and which a
+  // query comparing strings cannot compare.
+  test("keeps an unquoted date or timestamp in a yaml data block as written", () => {
+    const node = markdownToProseMirror(
+      "```yaml:event\ndate: 2025-06-01\nat: 2025-06-01T10:20:30Z\nquoted: '2025-06-01'\nexplicit: !!timestamp 2025-06-01\n```"
+    ).content[0];
+    expect(node.type).toBe("dataBlock");
+    expect(node.attrs.data).toEqual({
+      date: "2025-06-01",
+      at: "2025-06-01T10:20:30Z",
+      quoted: "2025-06-01",
+      explicit: "2025-06-01",
+    });
+  });
+
+  test("resolves every other yaml type as before — numbers, booleans, null, merge keys", () => {
+    const node = markdownToProseMirror(
+      "```yaml:plan\ncount: 3\nprice: 1.5\nlive: true\nnote: ~\nbase: &b { tier: pro }\nplan:\n  <<: *b\n  seats: 5\n```"
+    ).content[0];
+    expect(node.attrs.data).toEqual({ count: 3, price: 1.5, live: true, note: null, base: { tier: "pro" }, plan: { tier: "pro", seats: 5 } });
+  });
+
   test("parses indented code blocks", () => {
     const markdown = "    const x = 1;\n    console.log(x);";
     const result = markdownToProseMirror(markdown);

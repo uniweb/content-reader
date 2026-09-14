@@ -11,6 +11,33 @@ import { latexToMathML } from "../math/index.js";
 import { parseAttributeString } from "./attributes.js";
 
 /**
+ * The YAML types a tagged data block is read with: js-yaml's default schema minus its
+ * IMPLICIT timestamp type, so an unquoted `2025-06-01` (or `2025-06-01T10:20:30Z`) is
+ * the text the author wrote — the value a quoted one has — rather than a `Date`, whose
+ * only JSON form is a timestamp nobody wrote. Numbers, booleans, null and `<<` merge
+ * keys resolve as before; an explicit `!!timestamp` yields its text too.
+ *
+ * The same set the site build reads its YAML files with, defined here rather than
+ * imported, since this package depends on no build tooling.
+ */
+const DATA_BLOCK_YAML = {
+    schema: yaml.CORE_SCHEMA.extend({
+        implicit: [yaml.types.merge],
+        explicit: [
+            new yaml.Type("tag:yaml.org,2002:timestamp", {
+                kind: "scalar",
+                resolve: (data) => yaml.types.timestamp.resolve(data),
+                construct: (data) => data,
+            }),
+            yaml.types.binary,
+            yaml.types.omap,
+            yaml.types.pairs,
+            yaml.types.set,
+        ],
+    }),
+};
+
+/**
  * Split a container fence's info string into its component and params.
  *
  * `@Alert{type=warning}` → `{ component: "Alert", type: "warning" }`
@@ -168,7 +195,7 @@ function parseCodeBlockData(text, language) {
 
     if (lang === "yaml" || lang === "yml") {
         try {
-            return yaml.load(text);
+            return yaml.load(text, DATA_BLOCK_YAML);
         } catch {
             return null;
         }
