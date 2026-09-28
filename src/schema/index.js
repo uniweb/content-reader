@@ -175,7 +175,11 @@ const baseNodes = {
             alt: { default: null },
             // Dynamic attributes from {key=value} syntax are also stored here
         },
-        group: "block",
+        // No group, like `image`: the parser emits it as a block when a `![…](@C)`
+        // is alone in its paragraph, and inline everywhere else — every `[text](@C)`,
+        // `[@key]` and `[#id]` among them. ⛔ Until 2026-09-27 this said
+        // `group: "block"`, which an editor read as a placement rule.
+        // group: "block inline",
     },
 
     inset_placeholder: {
