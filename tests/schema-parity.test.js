@@ -19,8 +19,9 @@
  * grep cannot tell the two apart.
  *
  * DIRECTION: emitted ⊆ declared. The converse is deliberately not asserted —
- * `inset_placeholder` is produced downstream by @uniweb/build's
- * content-collector, and some declared types are reachable only through
+ * `inset_placeholder` is produced downstream — by `@uniweb/core` when it lifts
+ * insets at render (by @uniweb/build's collector until 2026-09-27) — and some
+ * declared types are reachable only through
  * syntax this corpus doesn't cover. Declared-but-unreached is inert;
  * emitted-but-undeclared is the failure that bites.
  *
@@ -107,6 +108,16 @@ const CORPUS = {
   mathDisplay: '$$\n\\int_0^1 x\\,dx\n$$\n',
   mathFence: '```math\nE = mc^2\n```\n',
   table: '| a | b |\n|---|---|\n| 1 | 2 |\n',
+  // What a node HOLDS, for the content check below — each the case one declared
+  // expression got wrong until 2026-09-28.
+  blockquoteHoldsBlocks: '> # A quoted heading\n>\n> - an item\n>\n> ![Chart](@Chart)\n',
+  blockquoteEmpty: '>\n',
+  listItemOpensWithCode: '- ```js\n  x\n  ```\n',
+  listItemOpensWithQuote: '- > quoted\n',
+  listItemEmpty: '-\n',
+  insetBlockEmpty: '```@Alert\n```\n',
+  conceptBlockEmpty: '```md:faq\n```\n',
+  emptyDocument: '',
 }
 
 /** Collect every node and mark type in a doc, remembering where it came from. */
@@ -352,5 +363,53 @@ describe('asset identity attrs are declared', () => {
       [s.id, s.ext].filter((a) => !declared.has(a))
     )
     expect(missing).toEqual(['assetExt'])
+  })
+})
+
+describe('schema parity: each node holds what its `content` declares', () => {
+  // ⭐ Emitted ⊆ declared, one level down: the children the parser puts in a node
+  // must fit that node's declared `content`, and a `+` must never come out empty.
+  // An editor derives where a node may sit from these expressions, so a wrong one
+  // misplaces content without an error. ⛔ Nothing checked them until 2026-09-28,
+  // and five described a TipTap editor rather than this parser: `blockquote` said
+  // `inline*` (it holds blocks), `listItem` `paragraph block*` (it may open with
+  // code or a quote), and `doc`, `inset_block` and `concept_block` said `block+`
+  // (each can come out empty).
+  const schema = getBaseSchema()
+
+  // A node that declares no group is placed both ways by the parser — `image`,
+  // `inset_ref` — so it fits a `block` term and an `inline` one.
+  const fits = (child, term) => {
+    if (child === term) return true
+    const group = schema.nodes[child]?.group
+    return group === undefined ? term === 'block' || term === 'inline' : group.split(' ').includes(term)
+  }
+
+  test('every declared content expression is one term with `*` or `+`', () => {
+    // What the check below can read. A richer expression needs a richer check,
+    // not a skipped node.
+    for (const [type, def] of Object.entries(schema.nodes)) {
+      if (def.content !== undefined) expect(def.content, type).toMatch(/^\w+[*+]$/)
+    }
+  })
+
+  test('every child fits its parent, and no `+` node comes out empty', () => {
+    const wrong = []
+    for (const [name, md] of Object.entries(CORPUS)) {
+      const visit = (n) => {
+        const expr = schema.nodes[n.type]?.content
+        const kids = n.content || []
+        if (expr) {
+          const term = expr.slice(0, -1)
+          for (const k of kids) {
+            if (!fits(k.type, term)) wrong.push(`${n.type} (${expr}) holds ${k.type} — CORPUS.${name}`)
+          }
+          if (expr.endsWith('+') && kids.length === 0) wrong.push(`${n.type} (${expr}) is empty — CORPUS.${name}`)
+        }
+        kids.forEach(visit)
+      }
+      visit(markdownToProseMirror(md))
+    }
+    expect(wrong).toEqual([])
   })
 })

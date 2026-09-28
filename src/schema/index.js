@@ -2,9 +2,14 @@
  * @fileoverview Base schema definition compatible with TipTap v2
  */
 
+// ⭐ A `content` expression says what the PARSER puts inside the node, and
+// `tests/schema-parity.test.js` checks it against parser output. ⛔ Until
+// 2026-09-28 five of them described a TipTap editor's schema instead —
+// `blockquote` said `inline*` and `listItem` `paragraph block*` — and an editor
+// that derived where a node may sit from them got it wrong.
 const baseNodes = {
     doc: {
-        content: "block+",
+        content: "block*", // an empty file is an empty doc
     },
 
     paragraph: {
@@ -201,7 +206,7 @@ const baseNodes = {
             component: {},
             // Dynamic attributes from {key=value} syntax are also stored here
         },
-        content: "block+",
+        content: "block*", // a fence with no body is an empty container
         group: "block",
     },
 
@@ -241,7 +246,7 @@ const baseNodes = {
             // added to fix for ```yaml silently becoming ```json.
             syntax: { default: null },
         },
-        content: "block+",
+        content: "block*", // an empty fence, or a `> [!WARNING]` with no text
         group: "block",
     },
 
@@ -290,7 +295,7 @@ const baseNodes = {
     },
 
     listItem: {
-        content: "paragraph block*",
+        content: "block+", // it may open with code, a quote or a heading; `-` alone holds an empty paragraph
         defining: true,
     },
 
@@ -349,7 +354,7 @@ const baseNodes = {
         defining: true,
     },
     blockquote: {
-        content: "inline*",
+        content: "block*", // paragraphs, headings, lists, a lone `![…](@C)`; `>` alone is empty
         group: "block",
     },
 
