@@ -15,11 +15,12 @@
  * - HTML entities are only decoded for specific token types (codespan, link) where
  *   we need the processed content
  */
-function parseInline(token, schema, removeNewLine = false) {
+function parseInline(token, schema) {
     if (token.type === "text") {
-        if (removeNewLine && token.raw) {
-            token.raw = token.raw.replace(/\n/g, "");
-        }
+        // A soft line break stays a "\n" — in a list item as in a paragraph. It
+        // renders as a space, and content-writer indents it back under its item.
+        // Until 2026-09-29 list items deleted it, fusing the words either side
+        // ("of its\n  sub-organizations" → "itssub-organizations").
         // Use raw to get unencoded characters (', ", &, etc.)
         // marked's .text property encodes these as HTML entities
         return token.raw ? [{ type: "text", text: token.raw }] : [];
@@ -36,7 +37,7 @@ function parseInline(token, schema, removeNewLine = false) {
         const mark = { type: MARK_FOR[token.type] };
 
         return token.tokens.flatMap((t) =>
-            parseInline(t, schema, removeNewLine).map((node) => ({
+            parseInline(t, schema).map((node) => ({
                 ...node,
                 marks: [...(node.marks || []), mark],
             }))
@@ -133,7 +134,7 @@ function parseInline(token, schema, removeNewLine = false) {
         // If there are child tokens (nested formatting), process them
         if (token.tokens && token.tokens.length > 0) {
             return token.tokens.flatMap((t) =>
-                parseInline(t, schema, removeNewLine).map((node) => ({
+                parseInline(t, schema).map((node) => ({
                     ...node,
                     marks: [...(node.marks || []), spanMark],
                 }))
@@ -278,7 +279,7 @@ function parseInline(token, schema, removeNewLine = false) {
         // case still produces exactly one node.
         if (Array.isArray(token.tokens) && token.tokens.length > 0) {
             const children = token.tokens.flatMap((t) =>
-                parseInline(t, schema, removeNewLine).map((node) => ({
+                parseInline(t, schema).map((node) => ({
                     ...node,
                     // A link cannot nest inside a link. marked autolinks a
                     // bare URL even when that URL is the LABEL of an explicit

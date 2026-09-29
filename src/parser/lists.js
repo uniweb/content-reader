@@ -42,7 +42,7 @@ function parseListItemContent(item, schema, parseBlock) {
                 : marked.Lexer.lexInline(token.text || "");
             content.push({
                 type: "paragraph",
-                content: inline.flatMap((t) => parseInline(t, schema, true)),
+                content: inline.flatMap((t) => parseInline(t, schema)),
             });
             continue;
         }
