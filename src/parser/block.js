@@ -9,6 +9,8 @@ import { parseList } from "./lists.js";
 import { parseTable } from "./tables.js";
 import { latexToMathML } from "../math/index.js";
 import { parseAttributeString } from "./attributes.js";
+import { isLineBreakTag } from "./text.js";
+import { warn } from "./warnings.js";
 
 /**
  * The YAML types a tagged data block is read with: js-yaml's default schema minus its
@@ -248,9 +250,16 @@ function parseBlocks(tokens, schema) {
 
 function parseBlock(token, schema) {
     // console.log("BLOCK TOKEN: ", token);
-    // Skip HTML comments
-    if (token.type === "html" && token.text.startsWith("<!--")) {
-        return null;
+    if (token.type === "html") {
+        const raw = String(token.raw ?? token.text ?? "").trim();
+        // A comment is the author's note to themselves, and a <br> on a line of
+        // its own breaks nothing between blocks.
+        if (!raw || raw.startsWith("<!--") || isLineBreakTag(raw)) return null;
+        // HTML is not content: a block of it stays the text it is and shows as
+        // written. ⛔ Until 2026-10-14 it was dropped without a word — the
+        // author's text vanished from the page.
+        warn(`HTML is not content, so this block shows as written: \`${raw.split("\n")[0]}\``);
+        return { type: "paragraph", content: [{ type: "text", text: raw }] };
     }
 
     if (token.type === "paragraph") {

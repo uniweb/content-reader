@@ -2,6 +2,9 @@
  * @fileoverview Parse inline markdown elements
  */
 
+import { decodeText, isLineBreakTag } from "./text.js";
+import { warn } from "./warnings.js";
+
 /**
  * Parse inline markdown content into ProseMirror/Tiptap nodes
  * @param {Object} token - Marked token for inline content
@@ -9,11 +12,11 @@
  * @returns {Array} Array of ProseMirror inline nodes
  *
  * Notes on implementation choices:
- * - We use token.raw for plain text to avoid HTML entity encoding
+ * - A text node holds the characters a reader sees: every value is decoded
+ *   once on its way in (`./text.js`), whichever spelling marked handed over
  * - For formatted text (bold/italic), we use token.tokens to handle nested formatting
  * - Tiptap represents formatting as marks on text nodes, not nested structures
- * - HTML entities are only decoded for specific token types (codespan, link) where
- *   we need the processed content
+ * - HTML an author writes is not markup: it stays the text it is, except `<br>`
  */
 function parseInline(token, schema) {
     if (token.type === "text") {
@@ -21,9 +24,10 @@ function parseInline(token, schema) {
         // renders as a space, and content-writer indents it back under its item.
         // Until 2026-09-29 list items deleted it, fusing the words either side
         // ("of its\n  sub-organizations" → "itssub-organizations").
-        // Use raw to get unencoded characters (', ", &, etc.)
-        // marked's .text property encodes these as HTML entities
-        return token.raw ? [{ type: "text", text: token.raw }] : [];
+        // `raw` is the text as the author wrote it — marked's `.text` escapes
+        // it — and a character reference written in it (`&copy;`, `&lt;`)
+        // names a character, so it is decoded like every other value.
+        return token.raw ? [{ type: "text", text: decodeText(token.raw) }] : [];
     }
 
     if (token.type === "strong" || token.type === "em" || token.type === "del") {
@@ -45,8 +49,13 @@ function parseInline(token, schema) {
     }
 
     if (token.type === "html") {
-        // Handle HTML tokens however you need
-        // You might want to strip the < > or process them differently
+        // HTML is not content: components decide how content renders. A tag
+        // an author writes stays the text it is, and shows as written — with
+        // one exception, `<br>`, the line break a heading has no other way to
+        // spell [Diego, 2026-10-14]. ⛔ Until then the tag was kept as a text
+        // node holding it and became live markup on the page.
+        if (isLineBreakTag(token.raw)) return [{ type: "hardBreak" }];
+        warn(`HTML is not content, so \`${token.raw.trim()}\` shows as written`);
         return [{ type: "text", text: token.raw }];
     } else if (token.type === "br") {
         // A markdown hard break is a NODE, not a "\n" character. A raw newline
@@ -57,8 +66,9 @@ function parseInline(token, schema) {
         return [{ type: "hardBreak" }];
     } else if (token.type === "escape") {
         // marked's built-in escape tokenizer produces { raw: "\\$", text: "$" }.
-        // Use the unescaped text, not raw, so "\$20" renders as "$20".
-        return token.text ? [{ type: "text", text: token.text }] : [];
+        // Use the unescaped text, not raw, so "\$20" renders as "$20" — and
+        // decode it, since marked hands `\<` back as `&lt;`.
+        return token.text ? [{ type: "text", text: decodeText(token.text) }] : [];
     }
 
     // Custom math tokens from inline marked extensions.
@@ -95,11 +105,9 @@ function parseInline(token, schema) {
         ];
     }
 
-    // Decode HTML entities
-    const text = token.text
-        .replace(/&#39;/g, "'")
-        .replace(/&quot;/g, '"')
-        .replace(/&amp;/g, "&");
+    // marked escapes these values (a code span's `<` arrives as `&lt;`); a
+    // node holds the characters themselves.
+    const text = decodeText(token.text);
 
     if (token.type === "codespan") {
         return [
@@ -146,7 +154,7 @@ function parseInline(token, schema) {
             {
                 type: "text",
                 marks: [spanMark],
-                text: token.text,
+                text: decodeText(token.text),
             },
         ];
     }
@@ -256,7 +264,7 @@ function parseInline(token, schema) {
             type: isButton ? "button" : "link",
             attrs: {
                 href,
-                title: token.title || null,
+                title: token.title ? decodeText(token.title) : null,
                 ...(role && { role }),
                 ...(isButton && { variant }),
                 ...(download !== undefined && { download }),
@@ -416,7 +424,7 @@ function parseInline(token, schema) {
                     // `![alt](src "title")` or the curly-brace attr
                     // `![alt](src){caption="…"}`. The attr form takes
                     // precedence — it's the supported author surface.
-                    caption: attrCaption || token.title || null,
+                    caption: attrCaption || decodeText(token.title) || null,
                     alt: text || null,
                     role: finalRole,
                     // Icon-specific attributes
