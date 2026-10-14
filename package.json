@@ -6,7 +6,8 @@
   "main": "src/index.js",
   "exports": {
     ".": "./src/index.js",
-    "./math": "./src/math/index.js"
+    "./math": "./src/math/index.js",
+    "./vocabulary": "./src/vocabulary.js"
   },
   "scripts": {
     "test": "vitest run",
@@ -22,13 +23,13 @@
   "author": "Proximify Inc.",
   "license": "GPL-3.0-or-later",
   "dependencies": {
+    "@uniweb/semantic-parser": "workspace:~",
     "entities": "^8.1.0",
     "js-yaml": "^4.1.0",
     "marked": "^11.1.0",
     "temml": "^0.13.2"
   },
   "devDependencies": {
-    "@uniweb/semantic-parser": "workspace:*",
     "vitest": "^4.1.7"
   },
   "directories": {

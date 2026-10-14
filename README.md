@@ -79,49 +79,46 @@ Add rich attributes to images and links using `{...}` syntax:
 
 | Attribute | Description |
 |-----------|-------------|
-| `target` | Link target: `_blank`, `_self`, etc. |
+| `target` | Link target: `_blank`, `_self`, `_parent`, `_top` |
 | `rel` | Link relationship: `noopener`, `noreferrer`, etc. |
 | `download` | Download attribute (boolean or filename) |
+| `role` | A hint for a component: `nav`, … |
+| `size` | Size hint: `sm`, `md`, `lg` |
+| `icon` | Icon name or path |
+| `reload` | Navigate with a full page load rather than a route change |
 
 #### Button Attributes
 
-Buttons can be created with the `button` flag or the legacy `button:` prefix:
+A button is a link marked as one — with the `button` flag or the `button:` prefix:
 
 ```markdown
-# Using the button flag (recommended)
 [Get Started](https://example.com){button variant=primary size=lg}
 [Learn More](https://example.com){button variant=secondary icon=arrow-right}
-
-# Legacy prefix syntax (still supported)
 [Button Text](button:https://example.com)
 ```
 
 | Attribute | Description |
 |-----------|-------------|
-| `variant` | Style variant: `primary`, `secondary`, `outline`, `ghost` |
-| `size` | Button size: `sm`, `md`, `lg` |
-| `icon` | Icon name or path |
-| `target`, `rel`, `download` | Same as links |
+| `variant` | Style variant: `primary` (the default), `secondary`, `outline`, `ghost` |
+| every link attribute | Same as links |
 
 #### Bracketed Spans
 
-Style inline text with semantic classes using Pandoc-style bracketed spans:
+Name a style for inline text with a Pandoc-style bracketed span. The name is the
+style, and a site's theme says what it looks like:
 
 ```markdown
-# Basic class
-This has [highlighted text]{.highlight} for emphasis.
+# A named style
+This has [highlighted text]{highlight} for emphasis.
 
-# Multiple classes
-Here's [styled text]{.highlight .large} with two classes.
+# Two styles
+Here's [styled text]{highlight large} with both.
 
 # ID attribute
 Jump to [this section]{#anchor-point}.
 
-# Class and ID together
-[Important note]{.callout #note-1}
-
-# Custom attributes
-[Hover me]{.tooltip data-tip="More info here"}
+# A value
+[Hover me]{tooltip data-tip="More info here"}
 ```
 
 Output structure:
@@ -130,7 +127,7 @@ Output structure:
 {
   type: "text",
   text: "highlighted text",
-  marks: [{ type: "span", attrs: { class: "highlight" } }]
+  marks: [{ type: "span", attrs: { highlight: true } }]
 }
 ```
 
@@ -138,8 +135,12 @@ Output structure:
 |--------|--------|
 | `[text]{name}` | `<span name="true">` — an author label, styled via `theme.yml`'s `inline:` |
 | `[text]{#id}` | `<span id="id">` |
-| `[text]{.a .b}` | `<span class="a b">` |
 | `[text]{key=value}` | `<span key="value">` |
+| `[text]{class=a}` | `<span class="a">` — kept so a class an editor set survives a round trip |
+
+A style name is a letter, then letters, digits, `_` or `-`, and never starts with
+`on`. There is no class shorthand: in `[text]{.a}` the dot is part of the name,
+which no style can match, so it does nothing.
 
 Spans can be combined with other marks (bold, italic, links).
 
@@ -363,6 +364,28 @@ const markdown = `
 const doc = markdownToProseMirror(markdown);
 // Table cells will have appropriate alignment attributes
 ```
+
+### Checking a document — `@uniweb/content-reader/vocabulary`
+
+What a document in this format may hold — its node and mark types, their
+attributes, and the values that reach a page's markup — and a check against it:
+
+```javascript
+import { outsideVocabulary, richTextVocabulary } from "@uniweb/content-reader/vocabulary";
+
+outsideVocabulary(doc);
+// [] — within the vocabulary
+// [{ path: "/content/0/content/0/marks/0/attrs/href", rule: "url", found: "javascript:alert(1)" }]
+
+richTextVocabulary(); // the same rules as data, for a check written in another language
+```
+
+A document is checked, not cleaned: each finding names where (a JSON Pointer),
+which rule and what was found, so whoever wrote it can fix it. A store of content
+written by others — an editor's saves, a member's contributions — can run it
+before it stores. The value rules are the renderer's own
+(`@uniweb/semantic-parser/sanitize`). Text is never checked: it is text, and the
+renderer escapes it.
 
 ## Architecture
 

@@ -480,32 +480,35 @@ const baseNodes = {
     },
 };
 
+// ⭐ A link's and a button's attributes are the ones `parseInline` writes from
+// `{…}` — `tests/schema-parity.test.js` reads them from that code. ⛔ Until
+// 2026-10-14 `role`, `size`, `icon` and `reload` on a link, and `role` and
+// `reload` on a button, were written and not declared — `{role=nav}` is in the
+// published link-attribute table — so a check of a document against this
+// inventory refused what the reader itself wrote.
+const linkAttrs = {
+    href: {},
+    title: { default: null },
+    role: { default: null },     // a hint for a component — "nav", "button"
+    target: { default: null },   // _blank, _self, etc.
+    rel: { default: null },      // noopener, noreferrer, etc.
+    download: { default: null }, // Download attribute (true or filename)
+    size: { default: null },     // sm, md, lg
+    icon: { default: null },     // Icon name or path
+    reload: { default: null },   // a full page load rather than a route change
+    class: { default: null },
+};
+
 const baseMarks = {
     bold: {},
     italic: {},
     link: {
-        attrs: {
-            href: {},
-            title: { default: null },
-            // Extended attributes
-            target: { default: null },   // _blank, _self, etc.
-            rel: { default: null },      // noopener, noreferrer, etc.
-            download: { default: null }, // Download attribute (true or filename)
-            class: { default: null },
-        },
+        attrs: linkAttrs,
     },
     button: {
         attrs: {
-            href: {},
-            title: { default: null },
+            ...linkAttrs,
             variant: { default: "primary" }, // primary, secondary, outline, ghost, etc.
-            // Extended attributes
-            size: { default: null },     // sm, md, lg
-            icon: { default: null },     // Icon name or path
-            target: { default: null },
-            rel: { default: null },
-            download: { default: null },
-            class: { default: null },
         },
     },
     code: {
