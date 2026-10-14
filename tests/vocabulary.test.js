@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { markdownToProseMirror } from '../src/index.js'
 import { getBaseSchema } from '../src/schema/index.js'
-import { outsideVocabulary, richTextVocabulary } from '../src/vocabulary.js'
+import { cleanToVocabulary, outsideVocabulary, richTextVocabulary } from '../src/vocabulary.js'
 import { CORPUS } from './corpus.js'
 
 /**
@@ -135,6 +135,58 @@ describe('each rule refuses what it exists to refuse', () => {
     expect(outsideVocabulary(paragraph(text('x', [{ type: 'span', attrs: { 'a/b~c': true } }])))[0].path).toBe(
       '/content/0/content/0/marks/0/attrs/a~1b~0c',
     )
+  })
+})
+
+describe('cleaning at write removes what the renderer would leave out', () => {
+  const clean = (doc) => cleanToVocabulary(doc).document
+  const link = (href) => ({ type: 'link', attrs: { href, title: null } })
+
+  test('a link that may not be followed loses its mark; its text stays', () => {
+    expect(clean(paragraph(text('see '), text('this', [link('javascript:alert(1)'), { type: 'bold' }]), text(' now')))).toEqual(
+      paragraph(text('see '), text('this', [{ type: 'bold' }]), text(' now')),
+    )
+    // A list cleaning empties stays, empty — one rule for lists and attrs alike.
+    expect(clean(paragraph(text('x', [link('javascript:alert(1)')])))).toEqual(paragraph(text('x', [])))
+  })
+
+  test('an attribute outside the vocabulary goes; the node stays', () => {
+    const image = { type: 'image', attrs: { src: 'javascript:alert(1)', alt: 'A', svg: '<svg/>', target: 'x', href: '/p' } }
+    expect(clean({ type: 'doc', content: [image] })).toEqual({ type: 'doc', content: [{ type: 'image', attrs: { alt: 'A', href: '/p' } }] })
+    expect(clean(paragraph(text('x', [{ type: 'span', attrs: { accent: true, onclick: 'y', color: 'red;x' } }])))).toEqual(
+      paragraph(text('x', [{ type: 'span', attrs: { accent: true } }])),
+    )
+    expect(clean({ type: 'doc', content: [{ type: 'math_display', attrs: { latex: 'x', mathml: '<math><mi onclick="a">x</mi></math>' } }] })).toEqual(
+      { type: 'doc', content: [{ type: 'math_display', attrs: { latex: 'x' } }] },
+    )
+  })
+
+  test('a node outside the vocabulary goes with what it holds', () => {
+    expect(clean({ type: 'doc', content: [{ type: 'ImageBlock', attrs: { src: '/a.png' } }, paragraph(text('kept')).content[0]] })).toEqual(
+      paragraph(text('kept')),
+    )
+    expect(clean({ type: 'doc', content: [{ type: 'inset_placeholder', attrs: { refId: 'x" onload="y' } }] })).toEqual({ type: 'doc', content: [] })
+  })
+
+  test('a value that is not a document becomes an empty one; an empty field stays empty', () => {
+    expect(clean('<p>hi</p>')).toEqual({ type: 'doc', content: [] })
+    expect(clean({ type: 'paragraph', content: [] })).toEqual({ type: 'doc', content: [] })
+    expect(cleanToVocabulary(null)).toEqual({ document: null, removed: [] })
+  })
+
+  test('what was removed is what the check names, and the input is unchanged', () => {
+    const doc = paragraph(text('x', [link('javascript:alert(1)')]))
+    const before = JSON.stringify(doc)
+    const { removed } = cleanToVocabulary(doc)
+    expect(removed).toEqual(outsideVocabulary(doc))
+    expect(JSON.stringify(doc)).toBe(before)
+  })
+
+  test.each(Object.entries(CORPUS))('the reader’s %s: within after cleaning, and cleaning again removes nothing', (name, md) => {
+    const once = clean(markdownToProseMirror(md))
+    expect(outsideVocabulary(once)).toEqual([])
+    expect(cleanToVocabulary(once).removed).toEqual([])
+    expect(clean(once)).toEqual(once)
   })
 })
 
