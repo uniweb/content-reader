@@ -48,6 +48,9 @@ Add rich attributes to images and links using `{...}` syntax:
 # Styling attributes
 ![Background](./bg.jpg){fit=cover position=center loading=lazy}
 
+# Where it sits in a flow, and who made it
+![The harbour at dawn](./harbour.jpg){placement=wide author="Jane Doe"}
+
 # Classes and IDs
 ![Logo](./logo.svg){#main-logo}
 ```
@@ -62,6 +65,8 @@ Add rich attributes to images and links using `{...}` syntax:
 | `autoplay`, `muted`, `loop`, `controls` | Video playback options |
 | `fit` | Object-fit: `cover`, `contain`, `fill`, etc. |
 | `position` | Object-position value |
+| `placement` | Where it sits in content rendered in order: `left`, `right`, `wide`, `full` (`PLACEMENTS`). Any other value is left out, with a warning |
+| `author` | Who made it — a credit, or a document's author |
 | `#id` | Cross-reference / anchor id |
 
 #### Link Attributes
@@ -268,6 +273,28 @@ Full support for aligned columns:
 | :--- | :----: | ----: |
 | Text |  Text  |  Text |
 ```
+
+#### A Table's Caption Line
+
+Pandoc's spelling: the paragraph after a table that starts with `:`, after a blank line (a line
+directly under the rows is another row). It gives the table `caption`, `id` and `placement`:
+
+```markdown
+| Plan  | Price |
+| ----- | ----- |
+| Basic | $10   |
+
+: Plans and prices {placement=wide #tbl-plans}
+```
+
+```js
+{ type: "table", attrs: { caption: "Plans and prices", id: "tbl-plans", placement: "wide" }, content: [/* rows */] }
+```
+
+The caption is plain text: formatting in it is left out, with a warning, and its words are kept.
+The trailing braces take `#id` and `placement=…` and nothing else, so `: Revenue by {year}` keeps
+its placeholder as caption text; `\{` is a literal brace. `: {placement=full}` alone sets a
+placement with no caption. A table without the line has no `attrs`.
 
 ### Developer-Friendly Features
 
