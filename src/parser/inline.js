@@ -4,6 +4,7 @@
 
 import { decodeText, isLineBreakTag } from "./text.js";
 import { warn } from "./warnings.js";
+import { readPlacement } from "./placement.js";
 
 /**
  * Parse inline markdown content into ProseMirror/Tiptap nodes
@@ -406,6 +407,7 @@ function parseInline(token, schema) {
             controls,
             fit,          // object-fit: cover, contain, etc.
             position,     // object-position
+            placement,    // where it sits in a flow: left, right, wide, full
             color,        // Icon color
             href,         // Clickable media — wraps the rendered media in a link
             target,       // …and its link target
@@ -414,6 +416,7 @@ function parseInline(token, schema) {
 
         // Attribute role takes precedence over prefix role
         const finalRole = attrRole || role || "image";
+        const finalPlacement = readPlacement(placement, finalRole === "video" ? "video" : "image");
 
         return [
             {
@@ -450,6 +453,8 @@ function parseInline(token, schema) {
                     // Styling attributes
                     ...(fit && { fit }),
                     ...(position && { position }),
+                    // Where it sits in a flow
+                    ...(finalPlacement && { placement: finalPlacement }),
                     // Clickable media
                     ...(href && { href }),
                     ...(target && { target }),

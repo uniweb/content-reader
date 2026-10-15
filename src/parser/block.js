@@ -6,7 +6,7 @@ import { marked } from "marked";
 import yaml from "js-yaml";
 import { parseInline } from "./inline.js";
 import { parseList } from "./lists.js";
-import { parseTable } from "./tables.js";
+import { parseTable, readCaptionLine } from "./tables.js";
 import { latexToMathML } from "../math/index.js";
 import { parseAttributeString } from "./attributes.js";
 import { isLineBreakTag } from "./text.js";
@@ -238,14 +238,39 @@ function parseParagraph(token, schema) {
  *
  * Two callers existed and one remembered. So the walk lives here instead, and
  * the next container node type — a callout, a figure — gets the guarantee
- * without having to know about it.
+ * without having to know about it. The document's top level walks here too, so
+ * a table's caption line is read wherever a table is.
  *
  * @param {Array} tokens - marked tokens
  * @param {Object} schema - ProseMirror schema
  * @returns {Array} Content nodes, with nothing empty in it
  */
 function parseBlocks(tokens, schema) {
-    return (tokens || []).flatMap((token) => parseBlock(token, schema) ?? []);
+    const list = tokens || [];
+    const out = [];
+    for (let i = 0; i < list.length; i++) {
+        const token = list[i];
+        if (token.type === "table") {
+            // A table takes the caption line that follows it, Pandoc's
+            // `: Caption {placement=wide #tbl-id}` (tables.js) — read here
+            // because it is the NEXT token, which parseBlock never sees.
+            const table = parseTable(token, schema);
+            let next = i + 1;
+            while (list[next]?.type === "space") next++;
+            const attrs = readCaptionLine(list[next], schema);
+            if (attrs) {
+                if (Object.keys(attrs).length > 0) table.attrs = attrs;
+                i = next;
+            }
+            out.push(table);
+            continue;
+        }
+        const node = parseBlock(token, schema);
+        if (node === null || node === undefined) continue;
+        if (Array.isArray(node)) out.push(...node);
+        else out.push(node);
+    }
+    return out;
 }
 
 function parseBlock(token, schema) {
@@ -566,4 +591,4 @@ function parseBlock(token, schema) {
     return null;
 }
 
-export { parseBlock, parseParagraph };
+export { parseBlock, parseBlocks, parseParagraph };

@@ -155,6 +155,14 @@ const baseNodes = {
             // Styling attributes
             fit: { default: null },     // object-fit: cover, contain, fill, etc.
             position: { default: null }, // object-position
+            // Where the block sits in a flow — `{placement=wide}`: one of
+            // PLACEMENTS, or absent for the text column. An author's intent in
+            // a word, never a width: a component that renders the content in
+            // the order written may honour it (kit's Render does), and any
+            // other component ignores it. A section type declares the ones it
+            // honours, so an editor offers only those
+            // (`@uniweb/schemas/content`, `sequence.placement`).
+            placement: { default: null },
             // Clickable media — `![Shot](./s.jpg){href=/products target=_blank}`.
             // Documented in docs/reference/content-structure.md ("Clickable
             // Images and Videos"), down to the shape it yields, and read by
@@ -457,8 +465,22 @@ const baseNodes = {
         },
     },
     // Table nodes
+    //
+    // A table's attributes come from its caption line, the paragraph after it
+    // that starts with `:` — Pandoc's spelling (parser/block.js):
+    //
+    //     : Plans and prices {placement=wide #tbl-plans}
+    //
+    // `caption` is plain text, as an image's is; `id` is the cross-reference
+    // label kit's registry numbers tables by; `placement` is the image's.
+    // Written only when the line is there, so a table without one has no attrs.
     table: {
         content: "tableRow+",
+        attrs: {
+            caption: { default: null },
+            id: { default: null },
+            placement: { default: null },
+        },
         group: "block",
         tableRole: "table",
     },
@@ -555,4 +577,17 @@ function getBaseSchema() {
     };
 }
 
-export { getBaseSchema };
+/**
+ * Where a block may sit in a flow — an image's, a video's or a table's
+ * `placement`. Absent is the text column.
+ *
+ *   left · right — beside the text, on that side, and the text wraps around it
+ *   wide         — wider than the text column, within the section
+ *   full         — across the whole width of the section
+ *
+ * The reader leaves out any other value, and says so. `@uniweb/schemas` keeps
+ * its own copy, since it has no dependencies, and its tests compare the two.
+ */
+const PLACEMENTS = Object.freeze(["left", "right", "wide", "full"]);
+
+export { getBaseSchema, PLACEMENTS };

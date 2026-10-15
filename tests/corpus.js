@@ -80,6 +80,11 @@ export const CORPUS = {
   mathDisplay: '$$\n\\int_0^1 x\\,dx\n$$\n',
   mathFence: '```math\nE = mc^2\n```\n',
   table: '| a | b |\n|---|---|\n| 1 | 2 |\n',
+  // A table's caption line — the only place a table's attributes come from.
+  tableCaptionLine: '| a | b |\n|---|---|\n| 1 | 2 |\n\n: Plans and prices {placement=wide #tbl-plans}\n',
+  // Where a block sits in a flow, on an image and on a video.
+  placedImage: '![Harbour](./harbour.jpg){placement=left}\n',
+  placedVideo: '![](./tour.mp4){role=video placement=full}\n',
   // What a node HOLDS, for the content check below — each the case one declared
   // expression got wrong until 2026-09-28.
   blockquoteHoldsBlocks: '> # A quoted heading\n>\n> - an item\n>\n> ![Chart](@Chart)\n',

@@ -2,7 +2,7 @@
  * @fileoverview Main parser orchestration
  */
 
-import { parseBlock } from "./block.js";
+import { parseBlocks } from "./block.js";
 import { isEmptyContent } from "./utils.js";
 
 /**
@@ -12,17 +12,9 @@ import { isEmptyContent } from "./utils.js";
  * @returns {Object} ProseMirror document
  */
 function parseMarkdownContent(tokens, schema) {
-    const content = [];
-    for (let i = 0; i < tokens.length; i++) {
-        const node = parseBlock(tokens[i], schema);
-        if (node) {
-            if (Array.isArray(node)) {
-                content.push(...node);
-            } else {
-                content.push(node);
-            }
-        }
-    }
+    // The one walk a container's blocks take too, so a table finds its caption
+    // line at the top level as it does inside a blockquote.
+    const content = parseBlocks(tokens, schema);
 
     // Filter out any remaining null nodes and empty paragraphs
     return {

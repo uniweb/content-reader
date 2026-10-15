@@ -5,7 +5,7 @@
 
 import { marked } from "marked";
 import { parseMarkdownContent } from "./parser/index.js";
-import { getBaseSchema } from "./schema/index.js";
+import { getBaseSchema, PLACEMENTS } from "./schema/index.js";
 import { isValidUniwebMarkdown } from "./utils.js";
 import { getMarkedExtensions } from "./parser/marked-extensions.js";
 import { collectWarnings } from "./parser/warnings.js";
@@ -47,4 +47,7 @@ export { markdownToProseMirror, isValidUniwebMarkdown };
 // unregistered" from "unknown because malformed". The first is safe to preserve
 // opaquely and write back verbatim; the second is not.
 // `tests/schema-parity.test.js` keeps this honest against what the parser emits.
-export { getBaseSchema };
+//
+// `PLACEMENTS` are the values a block's `placement` may hold — where an image,
+// a video or a table sits in a flow.
+export { getBaseSchema, PLACEMENTS };
