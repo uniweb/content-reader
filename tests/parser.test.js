@@ -895,13 +895,40 @@ describe("Line breaks", () => {
     ]);
   });
 
-  test("a soft break stays inside the text node", () => {
+  test("a soft break is a space in the text node", () => {
     // A single newline is a soft break — a space, not a line break. It must
     // NOT become a hardBreak, or every wrapped paragraph grows a break.
     const result = markdownToProseMirror("wrapped\nparagraph");
 
     expect(result.content[0].content).toEqual([
-      { type: "text", text: "wrapped\nparagraph" },
+      { type: "text", text: "wrapped paragraph" },
+    ]);
+  });
+
+  // ⭐ A re-wrap changes nothing a reader sees, so it changes nothing in the
+  // document — and a push of one has nothing to send. Until 2026-10-16 the
+  // newline was kept, so a re-wrapped paragraph was a different document.
+  test.each([
+    ["wrapped at a space", "one two\nthree four"],
+    ["a space before the newline", "one two \nthree four"],
+    ["an indented continuation", "one two\n    three four"],
+    ["wrapped twice", "one\ntwo three\nfour"],
+  ])("a re-wrapped paragraph is the one-line paragraph (%s)", (_label, markdown) => {
+    expect(markdownToProseMirror(markdown)).toEqual(markdownToProseMirror("one two three four"));
+  });
+
+  test("a re-wrap inside a mark or a link reads as a space there too", () => {
+    expect(markdownToProseMirror("**one\ntwo** [three\nfour](https://example.com)")).toEqual(
+      markdownToProseMirror("**one two** [three four](https://example.com)")
+    );
+  });
+
+  test("the line ending after a <br> is no space: the line already broke", () => {
+    // ⛔ Until 2026-10-16 it was kept as a "\n" opening the next text.
+    expect(markdownToProseMirror("line one<br>\nline two").content[0].content).toEqual([
+      { type: "text", text: "line one" },
+      { type: "hardBreak" },
+      { type: "text", text: "line two" },
     ]);
   });
 });

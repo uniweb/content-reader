@@ -6,6 +6,26 @@ import { decodeText, isLineBreakTag } from "./text.js";
 import { warn } from "./warnings.js";
 import { readPlacement } from "./placement.js";
 
+/** A soft line break, with the spaces and tabs on either side of it. */
+const SOFT_BREAK = /[ \t]*\n[ \t]*/g;
+
+/**
+ * An element's inline nodes, with the space a text begins with dropped right after a
+ * `hardBreak`: the line ending that follows a `<br>` — a space by `parseInline` — and the
+ * spaces before the next line's words. A reader sees none, since the line already broke.
+ * ⛔ Until 2026-10-16 that line ending was kept as a "\n" opening the next text.
+ *
+ * @param {Array} nodes - ProseMirror inline nodes, in order
+ * @returns {Array}
+ */
+function afterLineBreaks(nodes) {
+    return nodes.flatMap((node, i) => {
+        if (i === 0 || node.type !== "text" || nodes[i - 1].type !== "hardBreak") return [node];
+        const text = node.text.replace(/^[ \t]+/, "");
+        return text ? [{ ...node, text }] : [];
+    });
+}
+
 /**
  * Parse inline markdown content into ProseMirror/Tiptap nodes
  * @param {Object} token - Marked token for inline content
@@ -21,14 +41,19 @@ import { readPlacement } from "./placement.js";
  */
 function parseInline(token, schema) {
     if (token.type === "text") {
-        // A soft line break stays a "\n" — in a list item as in a paragraph. It
-        // renders as a space, and content-writer indents it back under its item.
-        // Until 2026-09-29 list items deleted it, fusing the words either side
-        // ("of its\n  sub-organizations" → "itssub-organizations").
+        // ⭐ A PLAIN NEWLINE INSIDE A PARAGRAPH IS A SPACE (ruled 2026-10-16) — the
+        // space a reader sees, as CommonMark renders a soft line break: one space,
+        // with the spaces and tabs either side of it dropped. A line break is
+        // written on purpose — `<br>`, a backslash or two spaces at the end of the
+        // line — and is a `hardBreak` node. So re-wrapping a paragraph changes
+        // nothing in its document, and pushing a re-wrap sends nothing.
+        // ⛔ Until 2026-10-16 the newline was kept in the text — a re-wrap was an
+        // edit — and until 2026-09-29 a list item deleted it, fusing the words
+        // either side ("of its\n  sub-organizations" → "itssub-organizations").
         // `raw` is the text as the author wrote it — marked's `.text` escapes
         // it — and a character reference written in it (`&copy;`, `&lt;`)
         // names a character, so it is decoded like every other value.
-        return token.raw ? [{ type: "text", text: decodeText(token.raw) }] : [];
+        return token.raw ? [{ type: "text", text: decodeText(token.raw.replace(SOFT_BREAK, " ")) }] : [];
     }
 
     if (token.type === "strong" || token.type === "em" || token.type === "del") {
@@ -482,4 +507,4 @@ function parseInline(token, schema) {
     return token.raw ? [{ type: "text", text: token.raw }] : [];
 }
 
-export { parseInline };
+export { parseInline, afterLineBreaks };

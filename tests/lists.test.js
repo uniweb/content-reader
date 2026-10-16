@@ -258,10 +258,11 @@ describe("List Parsing", () => {
     });
   });
 
-  // A list item wrapped onto a second source line keeps the soft break, as a
-  // paragraph does. It was deleted, fusing the words either side of it:
-  // "of its" + "sub-organizations" → "itssub-organizations".
-  test("keeps a soft line break inside a wrapped list item", () => {
+  // A list item wrapped onto a second source line reads its soft break as a
+  // space, as a paragraph does. It was deleted until 2026-09-29, fusing the
+  // words either side ("of its" + "sub-organizations" → "itssub-organizations"),
+  // and kept as a "\n" until 2026-10-16.
+  test("reads a soft line break in a wrapped list item as a space", () => {
     const markdown = `- **Storage** is shared by all of its
   sub-organizations — see
   [Account](page:docs/a).`;
@@ -269,7 +270,7 @@ describe("List Parsing", () => {
     const paragraph = markdownToProseMirror(markdown).content[0].content[0].content[0];
     const text = paragraph.content.map((n) => n.text).join("|");
 
-    expect(text).toBe("Storage| is shared by all of its\nsub-organizations — see\n|Account|.");
+    expect(text).toBe("Storage| is shared by all of its sub-organizations — see |Account|.");
   });
 
   test("a wrapped list item and a wrapped paragraph keep the same text", () => {

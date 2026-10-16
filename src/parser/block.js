@@ -4,7 +4,7 @@
 
 import { marked } from "marked";
 import yaml from "js-yaml";
-import { parseInline } from "./inline.js";
+import { parseInline, afterLineBreaks } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable, readCaptionLine } from "./tables.js";
 import { latexToMathML } from "../math/index.js";
@@ -218,7 +218,7 @@ function parseParagraph(token, schema) {
     // return inlineTokens.flatMap((t) => parseInline(t, schema));
 
     // Use the pre-parsed tokens instead of re-lexing
-    return token.tokens.flatMap((t) => parseInline(t, schema));
+    return afterLineBreaks(token.tokens.flatMap((t) => parseInline(t, schema)));
 }
 
 /**
