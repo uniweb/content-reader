@@ -31,6 +31,7 @@ import {
     allowlists,
     inspectMathML,
     isCssColor,
+    isImageSource,
     isLinkTarget,
     isSafeLink,
     isStyleName,
@@ -42,6 +43,15 @@ const URL_ATTRIBUTES = {
     "mark:link": ["href"],
     "mark:button": ["href"],
     "node:image": ["src", "href", "poster", "preview"],
+};
+
+/**
+ * Of those, the ones a page loads as an image — which may hold the image itself, as data
+ * (`isImageSource`). ⭐ Ruled 2026-10-16 [Diego]: a built-in starter image is an SVG `data:`
+ * URL, and a write cleaned to the vocabulary kept the image and lost its picture.
+ */
+const IMAGE_ATTRIBUTES = {
+    "node:image": ["src", "poster", "preview"],
 };
 
 /** The attributes that name where a link opens. */
@@ -95,8 +105,15 @@ export function richTextVocabulary() {
             },
             url: {
                 attributes: flatten(URL_ATTRIBUTES),
-                description: "A URL with no scheme, or one of `schemes`.",
+                description:
+                    "A URL with no scheme, or one of `schemes`. On one of `images.attributes`, also the image itself, as data: see `images`.",
                 ...link,
+                images: {
+                    attributes: flatten(IMAGE_ATTRIBUTES),
+                    description:
+                        "A `data:` URL — read as a browser reads a URL: tab and newline removed, leading and trailing spaces and controls trimmed — holding a raster image in base64 that matches `raster`, or SVG (`svg.mediaType`) whose markup, decoded as `svg.decoding` says, is within `svg`, as MathML is within `mathml`.",
+                    ...rules.imageData,
+                },
             },
             target: {
                 attributes: flatten(TARGET_ATTRIBUTES),
@@ -186,9 +203,12 @@ function walk(doc) {
             } else if (!def.openAttrs && !(name in declared)) {
                 keep = outside("attribute", name);
             } else if (value !== null && value !== undefined) {
-                if (URL_ATTRIBUTES[key]?.includes(name) && !isSafeLink(value)) {
-                    keep = outside("url", value);
-                    if (kind === "mark") drop = true;
+                if (URL_ATTRIBUTES[key]?.includes(name)) {
+                    const loaded = IMAGE_ATTRIBUTES[key]?.includes(name);
+                    if (!(loaded ? isImageSource(value) : isSafeLink(value))) {
+                        keep = outside("url", value);
+                        if (kind === "mark") drop = true;
+                    }
                 }
                 if (TARGET_ATTRIBUTES[key]?.includes(name) && !isLinkTarget(value)) keep = outside("target", value);
                 if (MATHML_ATTRIBUTES[key]?.includes(name)) {

@@ -82,6 +82,23 @@ describe('each rule refuses what it exists to refuse', () => {
     ])
   })
 
+  // ⭐ Ruled 2026-10-16 [Diego] — a built-in starter image is an SVG `data:` URL, and a write
+  // cleaned to the vocabulary kept the image and lost its picture.
+  test('an image may hold its picture as data: a raster in base64, or SVG within the allowlist', () => {
+    const image = (attrs) => ({ type: 'doc', content: [{ type: 'image', attrs: { src: '/a.png', ...attrs } }] })
+    const svg = `data:image/svg+xml,${encodeURIComponent('<svg viewBox="0 0 8 8"><rect width="8" height="8" fill="currentColor"/></svg>')}`
+    expect(rules(image({ src: svg, poster: 'data:image/png;base64,iVBORw0KGgo=', preview: svg }))).toEqual([])
+    expect(rules(image({ src: 'data:image/svg+xml,<svg onload="alert(1)"/>', poster: 'data:text/html,<b>x</b>' }))).toEqual([
+      'url /content/0/attrs/src',
+      'url /content/0/attrs/poster',
+    ])
+    // A link is followed, never loaded as an image: data stays outside, whatever it holds.
+    expect(rules(image({ href: svg }))).toEqual(['url /content/0/attrs/href'])
+    expect(rules(paragraph(text('x', [{ type: 'link', attrs: { href: svg } }])))).toEqual([
+      'url /content/0/content/0/marks/0/attrs/href',
+    ])
+  })
+
   test('a target outside the four keywords', () => {
     expect(rules(paragraph(text('x', [{ type: 'link', attrs: { href: '/a', target: 'top" onclick="y' } }])))).toEqual([
       'target /content/0/content/0/marks/0/attrs/target',
