@@ -316,10 +316,11 @@ function parseBlock(token, schema) {
         // sibling: a paragraph of `![](lu-foo)\n![alt](url)` should hoist
         // the image to block level while leaving the icon in the
         // remaining paragraph remnant. Without this allowance the icon
-        // would block hoisting and the image would land inside the
-        // paragraph, where the semantic parser's group-level extractor
-        // doesn't reach into `paragraph.children` to populate
-        // `body.images[]`.
+        // would block hoisting and the figure would stay inline, inside the
+        // paragraph. ⛔ Until 2026-10-17 this also said the semantic parser
+        // does not reach into `paragraph.children` for `body.images[]`. It
+        // does (`processInlineElements`), for every role: an image inside a
+        // paragraph is read like one at the top level.
         const isInlineFriendly = (el) =>
             (el.type === "image" && el.attrs?.role === "icon") ||
             (el.type === "text" && (!el.text || /^\s*$/.test(el.text)));
