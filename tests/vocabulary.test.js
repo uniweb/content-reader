@@ -68,7 +68,8 @@ describe('each rule refuses what it exists to refuse', () => {
     expect(rules(link('javascript:alert(1)'))).toEqual(['url /content/0/content/0/marks/0/attrs/href'])
     expect(rules(link(' java\tscript:alert(1)'))).toEqual(['url /content/0/content/0/marks/0/attrs/href'])
     expect(rules(link('data:text/html,<script>alert(1)</script>'))).toEqual(['url /content/0/content/0/marks/0/attrs/href'])
-    for (const ok of ['/a', 'about', '#top', 'https://x.test', 'mailto:a@x.test', 'tel:+1', 'page:93dc5359', 'topic:intro']) {
+    expect(rules(link('topic:intro'))).toEqual(['url /content/0/content/0/marks/0/attrs/href'])
+    for (const ok of ['/a', 'about', '#top', 'https://x.test', 'mailto:a@x.test', 'tel:+1', 'page:93dc5359']) {
       expect(rules(link(ok))).toEqual([])
     }
     const image = (attrs) => ({ type: 'doc', content: [{ type: 'image', attrs: { src: '/a.png', ...attrs } }] })
