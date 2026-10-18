@@ -19,6 +19,7 @@
  */
 
 import temml from 'temml'
+import { sanitizeMathML } from '@uniweb/semantic-parser/sanitize'
 
 /**
  * Convert a LaTeX math expression to a self-contained MathML HTML string.
@@ -47,6 +48,13 @@ import temml from 'temml'
  * @param {string} latex
  * @param {Object} [opts]
  * @param {boolean} [opts.display=false] - true for block display math
+ * ⭐ The string is what `sanitizeMathML` writes of Temml's output (since
+ * 2026-10-18) — the markup a page shows anyway, since the renderer rebuilds
+ * MathML from that allowlist, and the only form the rich-text vocabulary holds
+ * (`@uniweb/content-reader/vocabulary`). It differs from Temml's in spelling
+ * (a quote written as itself, not `&quot;`) and in dropping what the allowlist
+ * leaves out, such as an operator's `linebreak`.
+ *
  * @returns {string} MathML as an HTML string. On malformed input the
  *                   returned span contains the LaTeX source and carries
  *                   the Temml parser message as a data-* attribute —
@@ -60,7 +68,7 @@ export function latexToMathML(latex, { display = false } = {}) {
     xml: true,
     annotate: true,
   })
-  return cleanupErrorSpan(raw)
+  return sanitizeMathML(cleanupErrorSpan(raw))
 }
 
 /**

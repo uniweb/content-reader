@@ -224,3 +224,62 @@ describe('the vocabulary as data', () => {
     ])
   })
 })
+
+describe('a removal is reported once, at its cause, and `null` is a value of the wrong kind', () => {
+  test('a link that goes is one finding, whatever else its attributes hold', () => {
+    const doc = paragraph(text('x', [{ type: 'link', attrs: { href: 'ftp://x.test', title: null, target: 'nowhere', textAlign: 'left' } }]))
+    expect(rules(doc)).toEqual(['url /content/0/content/0/marks/0/attrs/href'])
+    expect(cleanToVocabulary(doc).document).toEqual(paragraph(text('x', [])))
+  })
+
+  test('a placeholder that goes is one finding', () => {
+    const doc = { type: 'doc', content: [{ type: 'inset_placeholder', attrs: { refId: '1x', extra: true } }] }
+    expect(rules(doc)).toEqual(['ref-id /content/0/attrs/refId'])
+  })
+
+  test('an undeclared attribute goes whatever its value; a declared one may be null', () => {
+    const doc = { type: 'doc', content: [{ type: 'paragraph', attrs: { textAlign: null }, content: [] }, { type: 'image', attrs: { src: null, alt: null, role: 'image' } }] }
+    expect(rules(doc)).toEqual(['attribute /content/0/attrs/textAlign'])
+    expect(cleanToVocabulary(doc).document.content[0]).toEqual({ type: 'paragraph', attrs: {}, content: [] })
+  })
+
+  test('`attrs`, `marks` or `content` that is null is of the wrong kind', () => {
+    const doc = {
+      type: 'doc',
+      content: [
+        { type: 'paragraph', attrs: null, content: [{ type: 'text', text: 'a', marks: [{ type: 'link', attrs: null }] }] },
+        { type: 'paragraph', content: null },
+        { type: 'paragraph', content: [{ type: 'text', text: 'b', marks: null }] },
+      ],
+    }
+    expect(rules(doc)).toEqual([
+      'shape /content/0/attrs',
+      'shape /content/0/content/0/marks/0/attrs',
+      'shape /content/1/content',
+      'shape /content/2/content/0/marks',
+    ])
+    expect(cleanToVocabulary(doc).document.content[0]).toEqual({ type: 'paragraph', content: [{ type: 'text', text: 'a', marks: [{ type: 'link' }] }] })
+  })
+
+  test('a key the shape says nothing about is kept', () => {
+    const doc = { type: 'doc', content: [{ type: 'paragraph', x: 1, content: [] }] }
+    expect(rules(doc)).toEqual([])
+    expect(cleanToVocabulary(doc).document).toEqual(doc)
+  })
+})
+
+describe('MathML is within only as a rebuild writes it — and the reader writes it so', () => {
+  const math = (mathml) => ({ type: 'doc', content: [{ type: 'math_display', attrs: { latex: 'x', mathml, id: null } }] })
+
+  test('a formula the reader compiled is within, quotes, line breaks and errors included', () => {
+    for (const md of ['$\\text{"a" and \'b\'}$', "$f'(x)$", '$$\na \\\\ b\n$$', '$\\frac{1$', '$x^2$']) {
+      expect(outsideVocabulary(markdownToProseMirror(md))).toEqual([])
+    }
+  })
+
+  test('MathML spelled another way is outside, and goes', () => {
+    const quoted = '<math xmlns="http://www.w3.org/1998/Math/MathML"><mtext>&quot;a&quot;</mtext></math>'
+    expect(rules(math(quoted))).toEqual(['mathml /content/0/attrs/mathml'])
+    expect(rules(math(quoted.replaceAll('&quot;', '"')))).toEqual([])
+  })
+})

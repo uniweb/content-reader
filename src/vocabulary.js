@@ -7,7 +7,11 @@
  * attribute values reach the markup a renderer builds — a link's URL, a span's
  * style names, a formula's MathML — and those follow the renderer's own rules
  * (`@uniweb/semantic-parser/sanitize`), imported here rather than restated, so
- * the check and the renderer cannot disagree about what a value may be.
+ * the check and the renderer cannot disagree about what a value may be. A
+ * formula's MathML, or an image's SVG held as data, is within only as the
+ * renderer's rebuild writes it — what `latexToMathML` stores, and what
+ * `sanitizeMathML` / `sanitizeSVG` return — so a store holds no markup that a
+ * reader parsing it as written could read differently.
  *
  * `outsideVocabulary(doc)` names each thing outside the vocabulary, and an empty
  * list means the document is within it. `cleanToVocabulary(doc)` removes each of
@@ -95,13 +99,13 @@ export function richTextVocabulary() {
         rules: {
             shape: {
                 description:
-                    "The root is a node of type `doc`. A node is an object with a string `type`; its `attrs`, when present, an object; its `content` an array of nodes; its `marks` an array of objects with a string `type` and, when present, object `attrs`. A text node's `text` is a string.",
+                    "The root is a node of type `doc`. A node is an object with a string `type`; its `attrs`, when present, an object; its `content` an array of nodes; its `marks` an array of objects with a string `type` and, when present, object `attrs`. A text node's `text` is a string. Present means present with any value, `null` included. Any other key of a node or a mark is kept as it is.",
             },
             "node-type": { description: "A node's type is one of `nodes`." },
             "mark-type": { description: "A mark's type is one of `marks`." },
             attribute: {
                 description:
-                    "An attribute of a type that is not `open` is one of its `attributes`. A null value is always allowed: it means unset, and no rule below applies to it.",
+                    "An attribute of a type that is not `open` is one of its `attributes`, whatever its value. A declared attribute's null value means unset: no rule below applies to it.",
             },
             url: {
                 attributes: flatten(URL_ATTRIBUTES),
@@ -133,7 +137,7 @@ export function richTextVocabulary() {
             mathml: {
                 attributes: flatten(MATHML_ATTRIBUTES),
                 description:
-                    "MathML within the allowlist: every element one of `elements`; none of `droppedWithContent`; every attribute one of `attributes` or a common one, never a handler or a link, its value never matching `unsafeValue`; every style declaration kept; no comment, doctype or processing instruction.",
+                    "MathML within the allowlist: every element one of `elements`; none of `droppedWithContent`; every attribute one of `attributes` or a common one, never a handler or a link, its value never matching `unsafeValue`; every style declaration kept; no comment, doctype, processing instruction or CDATA section; and every text run, tag and attribute written as `written` says.",
                 ...rules.mathml,
             },
             "ref-id": {
@@ -164,6 +168,10 @@ const isObject = (v) => v !== null && typeof v === "object" && !Array.isArray(v)
  * a target, a style name, a colour, MathML outside the allowlist · `attrs`,
  * `marks` or `content` that is not the right kind of value. A root that is not a
  * document becomes an empty one.
+ *
+ * A removal is reported once, at its cause: nothing inside a node or mark that
+ * goes is reported, so a link whose URL may not be followed is one finding
+ * whatever else its attributes hold.
  */
 function walk(doc) {
     const { nodes, marks } = getBaseSchema();
@@ -179,20 +187,24 @@ function walk(doc) {
         return { findings, document: { type: "doc", content: [] } };
     }
 
-    /** The attributes kept, and whether what holds them goes (a mark whose URL may not be followed). */
+    /**
+     * The attributes kept, what was found outside, and — when what holds them goes (a mark
+     * whose URL may not be followed, a placeholder whose reference is not an identifier) — the
+     * finding that caused it, which is then the only one reported.
+     */
     const cleanAttrs = (kind, type, def, attrs, path) => {
         if (!isObject(attrs)) {
-            find(path, "shape", "attrs that are not an object");
-            return { attrs: undefined, drop: false };
+            return { attrs: undefined, found: [[path, "shape", "attrs that are not an object"]], cause: null };
         }
         const declared = def.attrs || {};
         const key = `${kind}:${type}`;
         const kept = {};
-        let drop = false;
+        const found = [];
+        let cause = null;
         for (const [name, value] of Object.entries(attrs)) {
             const at = [...path, name];
-            const outside = (rule, found) => {
-                find(at, rule, found);
+            const outside = (rule, what) => {
+                found.push([at, rule, what]);
                 return false;
             };
             let keep = true;
@@ -207,7 +219,7 @@ function walk(doc) {
                     const loaded = IMAGE_ATTRIBUTES[key]?.includes(name);
                     if (!(loaded ? isImageSource(value) : isSafeLink(value))) {
                         keep = outside("url", value);
-                        if (kind === "mark") drop = true;
+                        if (kind === "mark") cause ??= found.at(-1);
                     }
                 }
                 if (TARGET_ATTRIBUTES[key]?.includes(name) && !isLinkTarget(value)) keep = outside("target", value);
@@ -219,12 +231,12 @@ function walk(doc) {
                 }
                 if (key === "node:inset_placeholder" && name === "refId" && !(typeof value === "string" && REF_ID.test(value))) {
                     keep = outside("ref-id", value);
-                    drop = true;
+                    cause ??= found.at(-1);
                 }
             }
             if (keep) kept[name] = value;
         }
-        return { attrs: kept, drop };
+        return { attrs: kept, found, cause };
     };
 
     const visitMark = (mark, path) => {
@@ -237,9 +249,13 @@ function walk(doc) {
             find(path, "mark-type", mark.type);
             return null;
         }
-        if (mark.attrs === undefined || mark.attrs === null) return mark;
-        const { attrs, drop } = cleanAttrs("mark", mark.type, markDef, mark.attrs, [...path, "attrs"]);
-        if (drop) return null;
+        if (mark.attrs === undefined) return mark;
+        const { attrs, found, cause } = cleanAttrs("mark", mark.type, markDef, mark.attrs, [...path, "attrs"]);
+        if (cause) {
+            find(...cause);
+            return null;
+        }
+        for (const f of found) find(...f);
         const out = { ...mark };
         if (attrs === undefined) delete out.attrs;
         else out.attrs = attrs;
@@ -256,19 +272,21 @@ function walk(doc) {
             find(path, "node-type", node.type);
             return null;
         }
-        const out = { ...node };
-        let drop = false;
-
-        if (node.attrs !== undefined && node.attrs !== null) {
-            const cleaned = cleanAttrs("node", node.type, def, node.attrs, [...path, "attrs"]);
-            drop = cleaned.drop;
-            if (cleaned.attrs === undefined) delete out.attrs;
-            else out.attrs = cleaned.attrs;
-        }
-
         if (node.type === "text" && typeof node.text !== "string") {
             find([...path, "text"], "shape", "a text node with no text");
-            drop = true;
+            return null;
+        }
+        const out = { ...node };
+
+        if (node.attrs !== undefined) {
+            const { attrs, found, cause } = cleanAttrs("node", node.type, def, node.attrs, [...path, "attrs"]);
+            if (cause) {
+                find(...cause);
+                return null;
+            }
+            for (const f of found) find(...f);
+            if (attrs === undefined) delete out.attrs;
+            else out.attrs = attrs;
         }
 
         if (node.marks !== undefined) {
@@ -289,7 +307,7 @@ function walk(doc) {
             }
         }
 
-        return drop ? null : out;
+        return out;
     };
 
     return { findings, document: visitNode(doc, []) };
@@ -301,7 +319,8 @@ function walk(doc) {
  * A finding names WHERE (`path`, a JSON Pointer into the document), WHICH rule
  * (`rule`) and WHAT was found (`found`, for a message). The findings come in
  * document order; a check implemented elsewhere that walks in another order
- * compares them as a set.
+ * compares them as a set. Nothing inside a node or mark that goes is named:
+ * a removal is named once, at its cause.
  *
  * @param {Object|null} doc - a ProseMirror document as JSON; null or undefined is an empty field
  * @returns {Array<{path: string, rule: string, found: string}>}
