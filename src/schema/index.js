@@ -186,6 +186,12 @@ const baseNodes = {
         attrs: {
             component: {},
             alt: { default: null },
+            // How it was written: `visual` for `![…](@C)`, `text` for `[…](@C)`,
+            // `[@key]` and `[#id]`. Core reads it, and keeps it out of the params
+            // beside `component` and `alt`; unset reads as `visual`. ⛔ Written
+            // by the reader and declared nowhere until 2026-10-18, so it rode
+            // among the open attributes, where a param lives.
+            embedKind: { default: null },
             // Dynamic attributes from {key=value} syntax are also stored here
         },
         // No group, like `image`: the parser emits it as a block when a `![…](@C)`
