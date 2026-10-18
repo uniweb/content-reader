@@ -105,7 +105,7 @@ export function richTextVocabulary() {
             "mark-type": { description: "A mark's type is one of `marks`." },
             attribute: {
                 description:
-                    "An attribute of a type that is not `open` is one of its `attributes`, whatever its value. A declared attribute's null value means unset: no rule below applies to it.",
+                    "An attribute of a type that is not `open` is one of its `attributes`, whatever its value. A null value means unset: no rule on a value applies to it. The rules on a name — this one, and `style-name` — apply whatever the value.",
             },
             url: {
                 attributes: flatten(URL_ATTRIBUTES),
@@ -126,7 +126,7 @@ export function richTextVocabulary() {
             },
             "style-name": {
                 attributes: ["mark:span.<any name but class, id, color and bg>"],
-                description: "A style name: it matches `pattern`, does not start with `on` in any case, and is none of `not` in any case.",
+                description: "A style name, whatever its value: it matches `pattern`, does not start with `on` in any case, and is none of `not` in any case.",
                 ...rules.styleName,
             },
             color: {

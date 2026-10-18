@@ -118,6 +118,16 @@ describe('each rule refuses what it exists to refuse', () => {
     ])
   })
 
+  // `style-name` is a rule on the name: a null is unset on a style name, and makes no other name one.
+  test('a span name whose value is null', () => {
+    const span = (attrs) => paragraph(text('x', [{ type: 'span', attrs }]))
+    expect(rules(span({ accent: null, color: null, bg: null }))).toEqual([])
+    expect(rules(span({ onclick: null, 'rgb(1, 2, 3)': null }))).toEqual([
+      'style-name /content/0/content/0/marks/0/attrs/onclick',
+      'style-name /content/0/content/0/marks/0/attrs/rgb(1, 2, 3)',
+    ])
+  })
+
   test('MathML outside the allowlist; the reader’s own within it', () => {
     const own = markdownToProseMirror('Euler $e^{i\\pi}+1=0$.\n\n$$\n\\int_0^1 x\\,dx\n$$\n')
     expect(rules(own)).toEqual([])
