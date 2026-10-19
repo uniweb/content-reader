@@ -301,3 +301,20 @@ describe("a code block keeps its code as written", () => {
     expect(codeOf("```html\n<p>Hi & bye</p>\n```")).toBe("<p>Hi & bye</p>");
   });
 });
+
+describe("a fence read as data loses only the indentation every line has", () => {
+  // `cleanCodeText`, for a fence that is not code to show — data, a container,
+  // maths. ⛔ Until 2026-10-19 it took the FIRST line's indentation as the
+  // common one, so a block opening on a blank line kept all of it, and its yaml
+  // did not parse: the data block arrived as a code block.
+  test("indented yaml, opening on a blank line", () => {
+    const [node] = markdownToProseMirror("```yaml:cfg\n\n  a: 1\n  b:\n    c: 2\n```").content;
+    expect(node.type).toBe("dataBlock");
+    expect(node.attrs.data).toEqual({ a: 1, b: { c: 2 } });
+  });
+
+  test("CONTROL — the same yaml unindented", () => {
+    const [node] = markdownToProseMirror("```yaml:cfg\na: 1\nb:\n  c: 2\n```").content;
+    expect(node.attrs.data).toEqual({ a: 1, b: { c: 2 } });
+  });
+});

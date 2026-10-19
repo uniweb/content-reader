@@ -88,9 +88,10 @@ function parseListItems(items, schema, parseBlock) {
  * author's file.
  *
  * Only recorded when true, so the overwhelmingly common tight list keeps the
- * document it has today. Additive: consumers read list content and `start` by
- * name, and rendering does not branch on it — both spellings already produce
- * the same output.
+ * document it has today. A renderer may draw the two differently, as markdown
+ * does — kit's `<Render>` draws a tight list's items without a paragraph each.
+ * ⛔ Until 2026-10-19 this said rendering did not branch on it, which was true
+ * until that day.
  *
  * @param {Object} token - List token
  * @param {Object} schema - ProseMirror schema

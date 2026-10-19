@@ -484,6 +484,9 @@ function parseBlock(token, schema) {
         // spaces) off every line, so nothing more comes off. ⛔ Until 2026-10-19
         // it was `cleanCodeText`'s too, so code whose first line was indented
         // lost that indentation, and a pull wrote the author's file back changed.
+        // ⚠️ Except a tab at a line's start: marked turns each into four spaces
+        // before it reads anything (measured, marked 11), so a Makefile's tabs
+        // arrive as spaces, and nothing here can see that they were tabs.
         const codeText = token.text;
 
         // A fence whose info string names a component is a CONTAINER, not code:
