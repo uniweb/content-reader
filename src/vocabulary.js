@@ -115,7 +115,7 @@ export function richTextVocabulary() {
                 images: {
                     attributes: flatten(IMAGE_ATTRIBUTES),
                     description:
-                        "A `data:` URL — read as a browser reads a URL: tab and newline removed, leading and trailing spaces and controls trimmed — holding a raster image in base64 that matches `raster`, or SVG (`svg.mediaType`) whose markup, decoded as `svg.decoding` says, is within `svg`, as MathML is within `mathml`.",
+                        "A `data:` URL — read as a browser reads a URL: tab and newline removed, leading and trailing spaces and controls trimmed — holding a raster image in base64 that matches `raster`, or SVG (`svg.mediaType`) whose markup, decoded as `svg.decoding` says, is within `svg`, as MathML is within `mathml`, except that an `href` or `xlink:href` follows `svg.references` alone: a URL is read by its scheme, as a link is, and never matched against `unsafeValue`.",
                     ...rules.imageData,
                 },
             },
@@ -137,7 +137,7 @@ export function richTextVocabulary() {
             mathml: {
                 attributes: flatten(MATHML_ATTRIBUTES),
                 description:
-                    "MathML within the allowlist: every element one of `elements`; none of `droppedWithContent`; every attribute one of `attributes` or a common one, never a handler or a link, its value never matching `unsafeValue`; every style declaration kept; no comment, doctype, processing instruction or CDATA section; and every text run, tag and attribute written as `written` says.",
+                    "MathML within the allowlist: every element one of `elements`; none of `droppedWithContent`; every attribute one of `attributes` or a common one, never a handler or a link, its value never matching `unsafeValue`; every style declaration kept; no comment, doctype, processing instruction or CDATA section; and every text run, tag and attribute written as `written` says. `unsafeValue` is matched against a value or a declaration as written, with no character taken out: nothing follows it as a URL, so it is not read as a link's scheme is.",
                 ...rules.mathml,
             },
             "ref-id": {

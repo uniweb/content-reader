@@ -138,6 +138,24 @@ describe('each rule refuses what it exists to refuse', () => {
     ])
   })
 
+  // A value nothing follows is matched against `unsafeValue` as written, where a URL is read by its
+  // scheme: a tab or a space inside `javascript:` leaves a MathML value within, and `javascript:`
+  // after a URL's scheme is part of its path — in a link, and in an image's SVG held as data.
+  test('a value nothing follows is matched as written; a URL is read by its scheme', () => {
+    const math = (mathml) => ({ type: 'doc', content: [{ type: 'math_display', attrs: { latex: 'x', mathml } }] })
+    for (const within of ['<mi mathvariant="java\tscript:x">x</mi>', '<mi mathvariant="java script:x">x</mi>', '<mi style="font-family:java\tscript:x;">x</mi>']) {
+      expect(rules(math(`<math>${within}</math>`))).toEqual([])
+    }
+    expect(rules(math('<math><mi mathvariant="javascript:x">x</mi></math>'))).toEqual(['mathml /content/0/attrs/mathml'])
+    expect(rules(math('<math><mi style="font-family:javascript:x;">x</mi></math>'))).toEqual(['mathml /content/0/attrs/mathml'])
+
+    const image = (svg) => ({ type: 'doc', content: [{ type: 'image', attrs: { src: `data:image/svg+xml,${encodeURIComponent(svg)}` } }] })
+    expect(rules(image('<image href="https://x.test/java\tscript:x"/>'))).toEqual([])
+    expect(rules(image('<image href="https://x.test/javascript:x"/>'))).toEqual([])
+    expect(rules(image('<image href="java script:x"/>'))).toEqual(['url /content/0/attrs/src'])
+    expect(rules(paragraph(text('x', [{ type: 'link', attrs: { href: 'https://x.test/javascript:x' } }])))).toEqual([])
+  })
+
   test('a placeholder’s reference is an identifier', () => {
     const placeholder = (refId) => ({ type: 'doc', content: [{ type: 'inset_placeholder', attrs: { refId } }] })
     expect(rules(placeholder('inset_0'))).toEqual([])
