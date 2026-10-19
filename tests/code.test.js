@@ -276,3 +276,28 @@ describe("Concept blocks — ```md:<tag>", () => {
         expect(markdownToProseMirror("```js\nconst x = 1\n```").content[0].type).toBe("codeBlock");
     });
 });
+
+describe("a code block keeps its code as written", () => {
+  // ⛔ Until 2026-10-19 the reader took the FIRST line's indentation off every
+  // line that had it and trimmed the block, so code whose first line was
+  // indented lost it, relative indentation could invert, and a pull wrote the
+  // author's file back changed.
+  const find = (node) => (node.type === "codeBlock" ? node : (node.content || []).map(find).find(Boolean));
+  const codeOf = (md) => find(markdownToProseMirror(md)).content[0].text;
+
+  test("its indentation included", () => {
+    expect(codeOf("```py\n    def f():\n        return 1\n```")).toBe("    def f():\n        return 1");
+  });
+
+  test("a first line indented more than the rest keeps both lines' indents", () => {
+    expect(codeOf("```html\n    <p>Hi</p>\n  <br>\n```")).toBe("    <p>Hi</p>\n  <br>");
+  });
+
+  test("CONTROL — a fence indented in a list item loses only its own indentation, as markdown says", () => {
+    expect(codeOf("- item\n\n  ```js\n  let a = 1\n    let b = 2\n  ```\n")).toBe("let a = 1\n  let b = 2");
+  });
+
+  test("its characters are text, never markup", () => {
+    expect(codeOf("```html\n<p>Hi & bye</p>\n```")).toBe("<p>Hi & bye</p>");
+  });
+});

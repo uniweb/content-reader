@@ -164,13 +164,30 @@ function processCodeInfo(info) {
  * @returns {string} Cleaned text
  */
 function cleanCodeText(text) {
-    // Remove common indent (for indented code blocks)
+    // For a fence read as something other than code to show — a container's
+    // markdown, a data block, maths. Its common indentation (what every
+    // non-blank line starts with) comes off, then the block is trimmed.
+    // ⛔ Until 2026-10-19 the FIRST line's indentation was taken as the common
+    // one: a block whose first line was indented more than the rest lost it
+    // from the lines that had it and kept the others, inverting their indents.
+    // A code block to display does not come through here (`token.text`, below).
     const lines = text.split("\n");
-    const indent = lines[0].match(/^\s*/)[0];
+    let common = null;
+    for (const line of lines) {
+        if (!line.trim()) continue;
+        const indent = line.match(/^[ \t]*/)[0];
+        if (common === null) {
+            common = indent;
+        } else {
+            let i = 0;
+            while (i < common.length && i < indent.length && common[i] === indent[i]) i++;
+            common = common.slice(0, i);
+        }
+        if (!common) break;
+    }
+    const prefix = common || "";
     return lines
-        .map((line) =>
-            line.startsWith(indent) ? line.slice(indent.length) : line
-        )
+        .map((line) => (line.startsWith(prefix) ? line.slice(prefix.length) : line))
         .join("\n")
         .trim();
 }
@@ -462,6 +479,12 @@ function parseBlock(token, schema) {
     if (token.type === "code") {
         const { language, tag } = processCodeInfo(token.lang);
         const rawText = cleanCodeText(token.text);
+        // A code block to show keeps its code as written: marked has already
+        // taken the fence's own indentation (and an indented block's four
+        // spaces) off every line, so nothing more comes off. ⛔ Until 2026-10-19
+        // it was `cleanCodeText`'s too, so code whose first line was indented
+        // lost that indentation, and a pull wrote the author's file back changed.
+        const codeText = token.text;
 
         // A fence whose info string names a component is a CONTAINER, not code:
         //
@@ -568,7 +591,7 @@ function parseBlock(token, schema) {
             return {
                 type: "codeBlock",
                 attrs: { language, tag },
-                content: [{ type: "text", text: rawText }],
+                content: [{ type: "text", text: codeText }],
             };
         }
 
@@ -576,7 +599,7 @@ function parseBlock(token, schema) {
         return {
             type: "codeBlock",
             attrs: { language },
-            content: [{ type: "text", text: rawText }],
+            content: [{ type: "text", text: codeText }],
         };
     }
 
