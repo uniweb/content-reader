@@ -192,7 +192,7 @@ visual insets stay inline. Textual insets always stay inline.
 
 Pandoc-style cite sugar that compiles to an inline `inset_ref` with
 `component: 'Cite'`. Used by foundations that ship a Cite renderer
-(see `@uniweb/book` for the reference implementation).
+(see `@unipress/book` for the reference implementation).
 
 ```markdown
 As Darwin (1859) showed [@darwin1859]{suppress-author}, selection acts
