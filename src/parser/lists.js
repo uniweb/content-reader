@@ -3,7 +3,7 @@
  */
 
 import { marked } from "marked";
-import { parseInline, afterLineBreaks } from "./inline.js";
+import { parseInlineTokens } from "./inline.js";
 
 /**
  * Parse the contents of one list item.
@@ -42,7 +42,7 @@ function parseListItemContent(item, schema, parseBlock) {
                 : marked.Lexer.lexInline(token.text || "");
             content.push({
                 type: "paragraph",
-                content: afterLineBreaks(inline.flatMap((t) => parseInline(t, schema))),
+                content: parseInlineTokens(inline, schema),
             });
             continue;
         }

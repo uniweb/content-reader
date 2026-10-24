@@ -330,6 +330,22 @@ This is a **bold** statement with a [link](https://example.com).
 const doc = markdownToProseMirror(markdown);
 ```
 
+### One element's words
+
+`inlineMarkdownToProseMirror` reads a value as the inline content of a single
+paragraph or heading, never as blocks. It is for a value that stands for one
+element's words, such as a translation of a heading:
+
+```javascript
+import { inlineMarkdownToProseMirror } from "@uniweb/content-reader";
+
+inlineMarkdownToProseMirror("1. **Introduction**");
+// [{ type: "text", text: "1. " },
+//  { type: "text", text: "Introduction", marks: [{ type: "bold" }] }]
+```
+
+Read as a document, the same value would be an ordered list.
+
 ### Using with TipTap
 
 The library is designed to work seamlessly with TipTap editors:

@@ -4,7 +4,7 @@
 
 import { marked } from "marked";
 import yaml from "js-yaml";
-import { parseInline, afterLineBreaks } from "./inline.js";
+import { parseInlineTokens } from "./inline.js";
 import { parseList } from "./lists.js";
 import { parseTable, readCaptionLine } from "./tables.js";
 import { latexToMathML } from "../math/index.js";
@@ -230,12 +230,8 @@ function parseCodeBlockData(text, language) {
  * @returns {Array} Array of ProseMirror inline nodes
  */
 function parseParagraph(token, schema) {
-    // // Use marked's inline lexer to properly handle inline code
-    // const inlineTokens = marked.Lexer.lexInline(token.text || token.raw);
-    // return inlineTokens.flatMap((t) => parseInline(t, schema));
-
     // Use the pre-parsed tokens instead of re-lexing
-    return afterLineBreaks(token.tokens.flatMap((t) => parseInline(t, schema)));
+    return parseInlineTokens(token.tokens, schema);
 }
 
 /**

@@ -5,6 +5,7 @@
 
 import { marked } from "marked";
 import { parseMarkdownContent } from "./parser/index.js";
+import { parseInlineTokens } from "./parser/inline.js";
 import { getBaseSchema, PLACEMENTS } from "./schema/index.js";
 import { isValidUniwebMarkdown } from "./utils.js";
 import { getMarkedExtensions } from "./parser/marked-extensions.js";
@@ -36,7 +37,33 @@ function markdownToProseMirror(markdown, { onWarning } = {}) {
     return result;
 }
 
-export { markdownToProseMirror, isValidUniwebMarkdown };
+/**
+ * Read markdown as ONE element's inline content — the words a paragraph or a
+ * heading holds — and never as blocks: `1. Introduction` is those words, not a
+ * list, and `- Draft` is not a bullet. The inverse of content-writer's
+ * `serializeInlineContent`, for a value that stands for one element's words,
+ * such as a translation of a heading.
+ *
+ * The words read as a paragraph's do: a plain newline is a space, and HTML is
+ * text, except `<br>` (see `markdownToProseMirror`).
+ *
+ * @param {string} markdown - Inline markdown
+ * @param {Object} [options]
+ * @param {(message: string) => void} [options.onWarning] - Told what the parse
+ *   could not honour
+ * @returns {Array} ProseMirror inline nodes
+ */
+function inlineMarkdownToProseMirror(markdown, { onWarning } = {}) {
+    const schema = getBaseSchema();
+    const source = String(markdown ?? "").replace(/\r\n?/g, "\n");
+    const { result, warnings } = collectWarnings(() =>
+        parseInlineTokens(marked.Lexer.lexInline(source, marked.defaults), schema),
+    );
+    if (onWarning) warnings.forEach((message) => onWarning(message));
+    return result;
+}
+
+export { markdownToProseMirror, inlineMarkdownToProseMirror, isValidUniwebMarkdown };
 
 // The framework's canonical ProseMirror dialect, as data: `{ nodes, marks }`
 // with each type's attrs and defaults, TipTap-v2 shaped.

@@ -507,4 +507,17 @@ function parseInline(token, schema) {
     return token.raw ? [{ type: "text", text: token.raw }] : [];
 }
 
-export { parseInline, afterLineBreaks };
+/**
+ * Inline tokens as ProseMirror inline nodes — the one walk an element's words take, whether a
+ * paragraph's, a heading's or a list item's (`block.js`, `lists.js`), or a value read as inline
+ * markdown alone (`inlineMarkdownToProseMirror`).
+ *
+ * @param {Array} tokens - Marked inline tokens
+ * @param {Object} schema - ProseMirror schema
+ * @returns {Array} ProseMirror inline nodes
+ */
+function parseInlineTokens(tokens, schema) {
+    return afterLineBreaks(tokens.flatMap((t) => parseInline(t, schema)));
+}
+
+export { parseInline, parseInlineTokens, afterLineBreaks };
