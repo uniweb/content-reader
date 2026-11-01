@@ -18,6 +18,30 @@ const text = (markdown) =>
     .map((n) => (n.type === "text" ? n.text : `[${n.type}]`))
     .join("");
 
+describe("a footnote stays the text it is", () => {
+  const blocks = (markdown) =>
+    markdownToProseMirror(markdown).content.map((block) =>
+      (block.content || []).map((n) => n.text ?? `[${n.type}]`).join(""),
+    );
+
+  test("a one-word note is not a link reference definition", () => {
+    expect(blocks("One word.[^b]\n\n[^b]: Word.")).toEqual(["One word.[^b]", "[^b]: Word."]);
+  });
+
+  test("nor is a note that is only a URL", () => {
+    const doc = markdownToProseMirror("A URL.[^c]\n\n[^c]: https://example.com/source");
+    expect(doc.content[0].content.map((n) => n.text).join("")).toBe("A URL.[^c]");
+    expect(doc.content[0].content.some((n) => n.marks?.some((m) => m.type === "link"))).toBe(false);
+    expect(doc.content[1].content.map((n) => n.text).join("")).toBe("[^c]: https://example.com/source");
+  });
+
+  test("a real reference definition still is one", () => {
+    const doc = markdownToProseMirror("See [the docs][d].\n\n[d]: https://example.com/docs");
+    expect(doc.content).toHaveLength(1);
+    expect(doc.content[0].content.some((n) => n.marks?.some((m) => m.type === "link"))).toBe(true);
+  });
+});
+
 describe("characters, decoded once", () => {
   test("a comparison is the text it is", () => {
     expect(text("if a<b then swap")).toBe("if a<b then swap");

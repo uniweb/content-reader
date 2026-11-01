@@ -309,6 +309,18 @@ export function createRefExtension() {
  */
 export function getMarkedExtensions() {
   return {
+    tokenizer: {
+      // `[^b]: Word.` and `[^c]: https://example.com` are valid CommonMark link
+      // reference definitions, so marked took them out of the document and turned
+      // each `[^b]` into a link to "Word.". A label starting with `^` is how
+      // markdown writes a footnote, and the file keeps a footnote as the text it is
+      // (`[^a]: Two words.`, which no definition can be, always was). Returning
+      // nothing means "not a definition"; `false` would mean "ask marked's own".
+      def(src) {
+        if (/^ {0,3}\[\^/.test(src)) return undefined
+        return false
+      },
+    },
     extensions: [
       createImageExtension(),
       createLinkExtension(),
