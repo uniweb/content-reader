@@ -59,6 +59,23 @@ describe("Math disambiguation matrix (Pandoc rules)", () => {
     expect(flattenText(doc)).toBe("The discount is $20");
   });
 
+  test("a formula in hard-wrapped prose is one formula", () => {
+    const doc = markdownToProseMirror("a cost of at most $\\alpha \\cdot\n\\text{OPT}$ here");
+    const math = mathNodes(doc);
+    expect(math).toHaveLength(1);
+    expect(math[0].attrs.latex).toBe("\\alpha \\cdot \\text{OPT}");
+  });
+
+  test("currency across a line break stays prose", () => {
+    const doc = markdownToProseMirror("It costs $5 and\n$10 total");
+    expect(mathNodes(doc)).toHaveLength(0);
+  });
+
+  test("a formula can't reach across paragraphs", () => {
+    const doc = markdownToProseMirror("From $5 to\n\nabout 10$ or so");
+    expect(mathNodes(doc)).toHaveLength(0);
+  });
+
   test("two consecutive inline maths: $x \\geq 0$ or $y \\leq 100$", () => {
     const doc = markdownToProseMirror("$x \\geq 0$ or $y \\leq 100$");
     const math = mathNodes(doc);

@@ -33,10 +33,12 @@ const BLOCK_DISPLAY = /^\$\$([\s\S]+?)\$\$(?:\s*\{([^}]+)\})?(?:\s*\n|\s*$)/
 const INLINE_DISPLAY = /^\$\$([^$\n]+?)\$\$/
 
 // Inline math: $X$ with Pandoc disambiguation — no whitespace adjacent to
-// delimiters, body does not span lines, and the closing $ is not followed
-// by a digit. Lookaheads/lookbehinds encode rules 1–2; backslash-escape
-// handling (rule 3) is delegated to marked's built-in escape tokenizer.
-const INLINE_MATH = /^\$(?!\s)([^$\n]+?)(?<!\s)\$(?!\d)/
+// delimiters, and the closing $ is not followed by a digit. Lookaheads/
+// lookbehinds encode rules 1–2; backslash-escape handling (rule 3) is delegated
+// to marked's built-in escape tokenizer. The body may wrap onto the next line,
+// as it may in Pandoc: an inline token only ever sees one paragraph, and a formula
+// in hard-wrapped prose used to print as its raw LaTeX, dollars and all.
+const INLINE_MATH = /^\$(?!\s)([^$]+?)(?<!\s)\$(?!\d)/
 
 export function createBlockMathExtension() {
   return {
@@ -135,7 +137,8 @@ export function createInlineMathExtension() {
       if (src.startsWith('$$')) return
       const m = INLINE_MATH.exec(src)
       if (!m) return
-      const latex = m[1]
+      // Where the source wrapped is not part of the formula.
+      const latex = m[1].replace(/\s*\n\s*/g, ' ')
       return {
         type: 'mathInline',
         raw: m[0],
