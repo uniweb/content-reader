@@ -63,7 +63,57 @@ function inlineMarkdownToProseMirror(markdown, { onWarning } = {}) {
     return result;
 }
 
-export { markdownToProseMirror, inlineMarkdownToProseMirror, isValidUniwebMarkdown };
+/**
+ * Markdown as its top-level blocks, each with the text it was read from and the nodes it reads to,
+ * so a writer can keep an author's text for each block an edit left alone and write only the blocks
+ * it changed.
+ *
+ * `head` is the text before the first block, and each block's `after` what follows it up to the next:
+ * blank lines, and text the lexer reads as no block — a link reference definition. `head` + each
+ * block's `text` + `after`, in order, is the markdown exactly.
+ *
+ * ⭐ Null when the blocks read one at a time do not give the document read whole — when a construct
+ * spans two of them, such as a table and the caption line after it. A writer then has no block of the
+ * author's text it can say holds which nodes, and writes the whole.
+ *
+ * @param {string} markdown
+ * @returns {{ head: string, blocks: Array<{ text: string, after: string, nodes: Object[] }> } | null}
+ */
+function markdownBlocks(markdown) {
+    const source = String(markdown ?? "");
+    const schema = getBaseSchema();
+    const read = (tokens) =>
+        collectWarnings(() => parseMarkdownContent(tokens, schema)).result.content;
+    const tokens = marked.lexer(source);
+    // Lexed again for the whole: a parse may consume what it is handed.
+    const whole = read(marked.lexer(source));
+    let head = "";
+    const blocks = [];
+    const between = (text) => {
+        if (blocks.length) blocks[blocks.length - 1].after += text;
+        else head += text;
+    };
+    let at = 0;
+    for (const token of tokens) {
+        // Where the lexer found it: what lies before is text it read as no block.
+        const start = source.indexOf(token.raw, at);
+        if (start < 0) return null;
+        between(source.slice(at, start));
+        at = start + token.raw.length;
+        if (token.type === "space") {
+            between(token.raw);
+            continue;
+        }
+        const text = token.raw.replace(/\n+$/, "");
+        const one = Object.assign([token], { links: tokens.links });
+        blocks.push({ text, after: token.raw.slice(text.length), nodes: read(one) });
+    }
+    between(source.slice(at));
+    if (JSON.stringify(blocks.flatMap((b) => b.nodes)) !== JSON.stringify(whole)) return null;
+    return { head, blocks };
+}
+
+export { markdownToProseMirror, inlineMarkdownToProseMirror, markdownBlocks, isValidUniwebMarkdown };
 
 // The framework's canonical ProseMirror dialect, as data: `{ nodes, marks }`
 // with each type's attrs and defaults, TipTap-v2 shaped.
