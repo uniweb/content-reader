@@ -21,7 +21,7 @@
     "parser"
   ],
   "author": "Proximify Inc.",
-  "license": "GPL-3.0-or-later",
+  "license": "Apache-2.0",
   "dependencies": {
     "@uniweb/semantic-parser": "workspace:~",
     "entities": "^8.1.0",
