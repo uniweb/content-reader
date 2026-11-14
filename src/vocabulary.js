@@ -42,6 +42,13 @@ import {
 } from "@uniweb/semantic-parser/sanitize";
 import { getBaseSchema } from "./schema/index.js";
 
+/**
+ * The schema itself — each node and mark, its attributes and their defaults, and where a node
+ * may sit — for an editor that writes this format (a member's rich-text editor is one), so its
+ * document model is the vocabulary's rather than a copy of it.
+ */
+export { getBaseSchema };
+
 /** The attributes that hold a URL a page follows or loads. */
 const URL_ATTRIBUTES = {
     "mark:link": ["href"],
