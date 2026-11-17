@@ -6,6 +6,17 @@ import { decodeText, isLineBreakTag } from "./text.js";
 import { warn } from "./warnings.js";
 import { readPlacement } from "./placement.js";
 
+/**
+ * The names a bracketed span writes for a mark of its own, rather than a style name: underline,
+ * superscript and subscript have one meaning for every reader, whatever a site's theme holds
+ * (2026-11-17). `@uniweb/content-writer` writes them back the same way, and `isStyleName`
+ * (`@uniweb/semantic-parser/sanitize`) refuses them as style names, so a theme can't take one.
+ */
+export const MARK_NAMES = Object.freeze({ underline: "underline", sup: "superscript", sub: "subscript" });
+
+/** The order a span's own marks are given in, so a text reads back as it was written. */
+const MARK_ORDER = ["underline", "superscript", "subscript"];
+
 /** A soft line break, with the spaces and tabs on either side of it. */
 const SOFT_BREAK = /[ \t]*\n[ \t]*/g;
 
@@ -154,23 +165,29 @@ function parseInline(token, schema) {
         // class syntax (see the header of ./attributes.js).
         //
         // Supports nested formatting via tokens
-        const { class: className, id, ...otherAttrs } = token.attrs || {};
-
-        const spanMark = {
-            type: "span",
-            attrs: {
-                ...(className && { class: className }),
-                ...(id && { id }),
-                ...otherAttrs,
-            },
+        // `underline`, `sup` and `sub`, written bare, are marks of their own (`MARK_NAMES`); any
+        // other name stays the span's. `[x]{sub accent}` is a subscript with the `accent` style.
+        const { class: className, id, ...named } = token.attrs || {};
+        const own = [];
+        const otherAttrs = {};
+        for (const [name, value] of Object.entries(named)) {
+            if (value === true && MARK_NAMES[name]) own.push(MARK_NAMES[name]);
+            else otherAttrs[name] = value;
+        }
+        const marks = MARK_ORDER.filter((type) => own.includes(type)).map((type) => ({ type }));
+        const spanAttrs = {
+            ...(className && { class: className }),
+            ...(id && { id }),
+            ...otherAttrs,
         };
+        if (Object.keys(spanAttrs).length > 0) marks.push({ type: "span", attrs: spanAttrs });
 
         // If there are child tokens (nested formatting), process them
         if (token.tokens && token.tokens.length > 0) {
             return token.tokens.flatMap((t) =>
                 parseInline(t, schema).map((node) => ({
                     ...node,
-                    marks: [...(node.marks || []), spanMark],
+                    marks: [...(node.marks || []), ...marks],
                 }))
             );
         }
@@ -179,7 +196,7 @@ function parseInline(token, schema) {
         return [
             {
                 type: "text",
-                marks: [spanMark],
+                ...(marks.length > 0 && { marks }),
                 text: decodeText(token.text),
             },
         ];

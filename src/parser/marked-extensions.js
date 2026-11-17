@@ -51,7 +51,9 @@ const PATTERNS = {
   // Span (bracketed span): [text]{attrs}
   // Pandoc-style bracketed spans - text with attributes but no href
   // Captures: text, attrs
-  span: /^\[([^\]]+)\]\{([^}]+)\}/,
+  // The text holds no bracket, so `[[2]{sup}](url)` is a link whose text holds a span — the link
+  // reads first, then its text — rather than a span `[2` and the rest as text (2026-11-17).
+  span: /^\[([^\[\]]+)\]\{([^}]+)\}/,
 
   // Cite shorthand: [@key]{attrs} or [@a;@b]{attrs}, attrs optional.
   // Captures: keys (the @key list, semicolon-separated), attrs (optional).
@@ -203,8 +205,9 @@ export function createSpanExtension() {
         raw,
         text,
         attrs,
-        // Include tokens for nested formatting (bold, italic, etc.)
-        tokens: [],
+        // The formatting inside the bracket — `[**bold** words]{accent}` — read as any text is.
+        // ⛔ Until 2026-11-17 this was an empty list, so the asterisks showed as written.
+        tokens: this.lexer.inlineTokens(text),
       }
     },
     childTokens: ['tokens'],

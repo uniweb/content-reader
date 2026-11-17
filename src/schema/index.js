@@ -547,6 +547,14 @@ const baseMarks = {
 
     strike: {},
 
+    // Underline, superscript and subscript — written `[text]{underline}`, `[2]{sup}` and `[2]{sub}`
+    // (parser/inline.js, `MARK_NAMES`), drawn as <u>, <sup> and <sub>. Marks and not style names,
+    // because each means the same to every reader of a text — a page, a Press document, a file, an
+    // export — whatever a site's theme holds: a CV keeps CO₂ and m² wherever it is read (2026-11-17).
+    underline: {},
+    superscript: {},
+    subscript: {},
+
     // Bracketed span — `[text]{accent}` / `[text]{.cls key=value}`
     // (parser/inline.js, token type "span").
     //
